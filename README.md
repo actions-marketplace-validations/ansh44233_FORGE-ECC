@@ -115,7 +115,7 @@ git --version
 Install the released CLI directly from the GitHub repository:
 
 ```bash
-npm install --global git+https://github.com/ansh44233/FORGE-ECC.git#v2.0.0
+npm install --global https://github.com/ansh44233/FORGE-ECC/releases/download/v2.0.1/forge-engineering-workbench-2.0.1.tgz
 ```
 
 Add FORGE to the project you work on (preview first, then install with runtime hooks):
@@ -162,7 +162,7 @@ npm --version
 git --version
 
 # Install FORGE
-npm install --global git+https://github.com/ansh44233/FORGE-ECC.git#v2.0.0
+npm install --global https://github.com/ansh44233/FORGE-ECC/releases/download/v2.0.1/forge-engineering-workbench-2.0.1.tgz
 
 # Move into your project
 cd C:\Users\YourName\Projects\my-project
@@ -234,7 +234,7 @@ forge shield . --sarif shield.sarif --fail-on high   # CI gate + GitHub code sca
 GitHub Action:
 
 ```yaml
-- uses: ansh44233/FORGE-ECC@v2.0.0
+- uses: ansh44233/FORGE-ECC@v2.0.1
   with:
     operation: shield
     fail-on: high
@@ -630,9 +630,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ansh44233/FORGE-ECC@v2.0.0
+      - uses: ansh44233/FORGE-ECC@v2.0.1
         with:
-          version: v2.0.0
+          version: v2.0.1
           project-path: .
           operation: inspect
 ```

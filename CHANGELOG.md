@@ -1,5 +1,19 @@
 # FORGE Changelog
 
+## 2.0.1 — Install and stability fixes
+
+### Fixed
+- **Installing a release no longer builds on your machine.** Install the prebuilt package attached to the GitHub release:
+  ```bash
+  npm install -g https://github.com/ansh44233/FORGE-ECC/releases/download/v2.0.1/forge-engineering-workbench-2.0.1.tgz
+  ```
+  Installing from a Git ref ran the TypeScript build during `npm install -g` and failed on some systems. README, docs, the landing page and the GitHub Action (for version tags) now use the release package.
+- **GitHub App private key parsing.** `GITHUB_APP_PRIVATE_KEY` is accepted with real newlines, literal `\n`, CRLF, surrounding quotes, newlines turned into spaces, or base64, and a clear error is shown when it still cannot be read. `/api/github/health?check=key` reports the key's shape without exposing it.
+- **CLI pipes.** `forge catalog | head` and similar pipes exit cleanly instead of crashing with `EPIPE`.
+
+### Changed
+- Landing page redesign with the FORGE icon set, and new README screenshots.
+
 ## 2.0.0 — The verified agent harness
 
 FORGE 2.0 turns the workbench into a harness layer for the AI coding tools you already use — and keeps FORGE's evidence-first approach: install, guard, verify and prove.

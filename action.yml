@@ -10,7 +10,7 @@ inputs:
   version:
     description: FORGE Git ref to install (tag, branch, or commit)
     required: false
-    default: v2.0.0
+    default: v2.0.1
   project-path:
     description: Repository directory to analyze
     required: false
@@ -46,7 +46,12 @@ runs:
         FORGE_VERSION: ${{ inputs.version }}
       run: |
         set -euo pipefail
-        npm install --global "git+https://github.com/ansh44233/FORGE-ECC.git#${FORGE_VERSION}"
+        if [[ "$FORGE_VERSION" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+          # Released versions install the prebuilt package attached to the GitHub release (no build step).
+          npm install --global "https://github.com/ansh44233/FORGE-ECC/releases/download/${FORGE_VERSION}/forge-engineering-workbench-${BASH_REMATCH[1]}.tgz"
+        else
+          npm install --global "git+https://github.com/ansh44233/FORGE-ECC.git#${FORGE_VERSION}"
+        fi
         forge --version
     - name: Run FORGE
       id: forge

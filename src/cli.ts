@@ -127,7 +127,7 @@ function readAgentDurationBudgets(): Record<string, number> | undefined {
   return budgets;
 }
 
-const VERSION = "2.0.0";
+const VERSION = "2.0.1";
 
 const HELP = `
 FORGE — The AI Engineering Workbench
@@ -1806,4 +1806,9 @@ async function main(args: string[]): Promise<void> {
       process.exitCode = 1;
   }
 }
+// Exit quietly when output is piped into a command that closes early (e.g. `forge catalog | head`).
+process.stdout.on("error", error => {
+  if ((error as NodeJS.ErrnoException).code === "EPIPE") process.exit(0);
+  throw error;
+});
 void main(process.argv.slice(2));
