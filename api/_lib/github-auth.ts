@@ -8,7 +8,8 @@ const COOKIE_NAME = "forge_github_session";
 const API_VERSION = "2022-11-28";
 
 export type OAuthState = { verifier: string; installationId: number | null };
-export type AuthSession = { userId: number; login: string; installationIds: number[]; createdAt: number };
+export type SessionRepository = { installationId: number; fullName: string; private: boolean };
+export type AuthSession = { userId: number; login: string; installationIds: number[]; createdAt: number; repositories?: SessionRepository[] };
 
 export function randomToken(bytes = 32): string {
   return randomBytes(bytes).toString("base64url");
@@ -47,6 +48,9 @@ export async function readSession(req: VercelRequest): Promise<AuthSession | und
     if (!Number.isSafeInteger(value.userId) || value.userId <= 0 ||
         typeof value.login !== "string" || !Array.isArray(value.installationIds) ||
         !value.installationIds.every(isValidInstallationId)) return undefined;
+    if (value.repositories !== undefined && (!Array.isArray(value.repositories) || !value.repositories.every(item =>
+        item && isValidInstallationId(item.installationId) && value.installationIds.includes(item.installationId) &&
+        typeof item.fullName === "string" && /^[A-Za-z0-9-]{1,39}\/[A-Za-z0-9._-]{1,100}$/.test(item.fullName) && typeof item.private === "boolean"))) return undefined;
     return value;
   } catch { return undefined; }
 }

@@ -1,8 +1,8 @@
 {
   "name": "forge-engineering-workbench",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": false,
-  "description": "An open-source AI engineering workbench with codebase intelligence, review history, regression signals, and a local engineering dashboard.",
+  "description": "FORGE: the verified engineering harness for AI coding agents \u2014 universal installer, Shield security scanner, runtime guard hooks, layered memory, GitHub App and codebase intelligence.",
   "type": "module",
   "bin": {
     "forge": "./dist/cli.js"
@@ -27,7 +27,14 @@
     "developer-tools",
     "engineering",
     "code-quality",
-    "workflows"
+    "workflows",
+    "agent-harness",
+    "claude-code",
+    "cursor",
+    "codex",
+    "mcp",
+    "security",
+    "skills"
   ],
   "license": "MIT",
   "devDependencies": {
@@ -42,6 +49,7 @@
   },
   "files": [
     "dist",
+    "catalog",
     "README.md",
     "LICENSE",
     "SECURITY.md",

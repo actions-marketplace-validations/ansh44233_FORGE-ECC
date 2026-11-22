@@ -23,6 +23,36 @@ forge dashboard ./my-project
 
 Open the local URL printed by `forge dashboard`. The dashboard operates on the workspace path you provide. GitHub App installation is a separate connection step and does not automatically upload or scan that local workspace.
 
+## FORGE v2: commands, PR checks and setup pull requests (preview on `forge-v2`)
+
+After installation, comment on any issue or pull request (collaborators with write access only):
+
+| Command | Result |
+|---|---|
+| `/forge analyze [--targets claude,cursor,codex,opencode,gemini] [--profile minimal\|standard\|full]` | Analyzes files, manifests and the last 100 commits, then opens a `forge/setup` PR with FORGE agents, skills, commands, rules, a repository-specific `forge-project` skill, managed `AGENTS.md`/`GEMINI.md` blocks and `.forge/install-state.json`. Existing files you wrote are never overwritten. |
+| `/forge repair` | Opens a `forge/repair` PR with catalog updates; files you edited are kept |
+| `/forge audit` | Comments a FORGE Shield report for the default branch (or the PR head) |
+| `/forge doctor` | Reports missing, outdated and new FORGE files on the default branch |
+| `/forge risk` | On a PR: explainable 0–100 change-risk score and suggested reviewers |
+| `/forge help` | Lists commands |
+
+On every pull request (opened, synchronize, reopened, ready for review) FORGE posts a **FORGE** check run with change risk and Shield results. It fails only when the PR itself adds a critical/high Shield finding (for example `bypassPermissions` or a plain-HTTP MCP server); high-risk changes are reported as neutral.
+
+### Required App settings for v2
+
+In GitHub → Settings → Developer settings → GitHub Apps → FORGE → **Permissions & events**:
+
+- Repository permissions: **Contents: Read and write**, **Pull requests: Read and write**, **Issues: Read and write**, **Checks: Read and write**, **Metadata: Read-only**
+- Subscribe to events: **Installation**, **Installation repositories**, **Issue comment**, **Pull request**
+
+Existing installations must accept the new permissions (GitHub sends the owner a request). Installation tokens are minted per event and scoped to the single repository in the event.
+
+### Operational notes
+
+- Webhook deliveries are de-duplicated in Redis by `X-GitHub-Delivery` for 24 hours.
+- Only agent-configuration files (at most 120, each ≤256 KiB) are fetched for Shield; source code is not downloaded. Analysis reads the file tree, root manifests and commit subjects.
+- The webhook function needs `GITHUB_APP_PRIVATE_KEY` (PEM; `\n` escapes are accepted) and includes `catalog/**` in its bundle (`vercel.json`).
+
 ## Server endpoints
 
 - `GET /api/github/health` reports whether required server environment variables are present.

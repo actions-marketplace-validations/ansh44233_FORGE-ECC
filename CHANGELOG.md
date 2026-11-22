@@ -1,5 +1,35 @@
 # FORGE Changelog
 
+## 2.0.0 — The verified agent harness
+
+FORGE 2.0 turns the workbench into a harness layer for the AI coding tools you already use — and keeps FORGE's evidence-first approach: install, guard, verify and prove.
+
+### Install into every harness
+- `forge install` renders FORGE agents, skills, slash commands and coding rules into **Claude Code, Cursor, Codex, OpenCode and Gemini** native formats, with `minimal`, `standard` and `full` profiles and automatic language detection (TypeScript/Node, React, Python, Go, Rust, Java/Kotlin, C#, PHP, Ruby, Swift).
+- Every written file is hashed in `.forge/install-state.json`; FORGE never overwrites files it did not write or that you edited (unless `--force`), only edits its own managed block in `AGENTS.md`/`GEMINI.md`, and refuses to write through symlinks.
+- `forge doctor`, `forge repair`, `forge uninstall` (restores the original project) and `forge catalog`.
+- Catalog: 41 agents, 26 skills, 24 commands and 23 rules, each validated in CI.
+
+### FORGE Shield
+- `forge shield` scores agent configuration 0–100: Claude Code permissions and hooks, MCP servers (Claude, Cursor, VS Code, Gemini, OpenCode), hidden prompt injection (invisible Unicode, override phrases, hidden comments), secrets and CI workflow risks.
+- JSON, Markdown and SARIF 2.1.0 output, `--fail-on` CI gate, safe `--fix`; defensive guidance that quotes attack phrases is not flagged.
+- GitHub Action `operation: shield`; FORGE's own CI self-scans.
+
+### Runtime hooks and memory
+- `forge install --hooks` adds Claude Code hooks: **FORGE Guard** (denies catastrophic commands, asks before force-push, history discard, destructive SQL, publish/deploy, sudo, secret access and agent-config edits), a Shield check when agents edit their own configuration, an optional verification gate on Stop, and session-start memory injection.
+- Layered memory (project + global) with provenance, credential rejection, relevance + recency search, handoffs; MCP tools `forge_memory_search`, `forge_memory_add`, `forge_shield_scan`.
+
+### GitHub App and hosted dashboard
+- Comment `/forge analyze` to get a setup pull request with FORGE files and a generated repository-specific `forge-project` skill (real verify commands, conventions, commit style). Also `/forge repair`, `audit`, `doctor`, `risk`, `help`.
+- Every pull request gets a **FORGE** check run with an explainable change-risk score and Shield annotations.
+- Hosted dashboard at `/app/`: Shield scores, setup health, PR risk, stack, activity and one-click setup PRs for repositories you can access.
+- `forge analyze --write` generates the project skill locally.
+
+### Upgrade notes
+- The GitHub App needs Contents, Pull requests, Issues and Checks read & write, plus Issue comment and Pull request events. Sign in to the dashboard again after upgrading.
+- `forge memory context --query` no longer mistakes the query for a project path.
+- All 1.0 commands keep working unchanged.
+
 ## 1.0.0 — First major release
 
 FORGE 1.0.0 brings the independent FORGE engineering workbench together as a versioned, installable product. It is designed to provide a local-first alternative for teams and developers who want codebase intelligence, agent orchestration, reviewable workflows, and measurable verification.

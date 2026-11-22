@@ -60,10 +60,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await redisCommand(["SET", `forge:github:installation:${item.id}`, JSON.stringify(record)]);
     }
 
-    const session: AuthSession = { userId: user.id, login: user.login, installationIds: accessibleIds, createdAt: Date.now() };
+    // Repositories this user can access through each installation (the dashboard allowlist).
+    const repositories: NonNullable<AuthSession["repositories"]> = [];
+    for (const installationId of accessibleIds.slice(0, 10)) {
+      for (let page = 1; page <= 3; page++) {
+        const result = await githubApi<{ repositories?: Array<{ full_name?: string; private?: boolean }> }>(`/user/installations/${installationId}/repositories?per_page=100&page=${page}`, token);
+        const current = result.repositories ?? [];
+        for (const repository of current) {
+          if (typeof repository.full_name === "string" && /^[A-Za-z0-9-]{1,39}\/[A-Za-z0-9._-]{1,100}$/.test(repository.full_name)) {
+            repositories.push({ installationId, fullName: repository.full_name, private: Boolean(repository.private) });
+          }
+        }
+        if (current.length < 100 || repositories.length >= 300) break;
+      }
+    }
+
+    const session: AuthSession = { userId: user.id, login: user.login, installationIds: accessibleIds, createdAt: Date.now(), repositories: repositories.slice(0, 300) };
     const sessionId = await createSession(session);
     setSessionCookie(res, sessionId);
-    return res.redirect(302, "/?github=connected");
+    return res.redirect(302, "/app/?github=connected");
   } catch {
     return res.status(502).json({ error: "GitHub sign-in failed. Please try again." });
   }

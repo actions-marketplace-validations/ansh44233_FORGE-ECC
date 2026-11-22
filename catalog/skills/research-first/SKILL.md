@@ -1,0 +1,13 @@
+---
+description: Gather primary-source evidence before choosing an approach or dependency
+profile: standard
+tags: research
+---
+
+# Research First
+
+1. Write down the decision to be made and its constraints.
+2. Check what the project already uses before adding anything new.
+3. Read primary sources (official docs, changelogs, source code) and note versions and dates.
+4. Compare at most three options on fit, maintenance, security and cost.
+5. Recommend one, with the evidence and what would change the decision.

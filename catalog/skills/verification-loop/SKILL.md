@@ -1,0 +1,15 @@
+---
+description: Choose, run and report proportionate checks; never claim an unrun check passed
+profile: minimal
+tags: testing, quality
+---
+
+# Verification Loop
+
+Use whenever you change code or claim something works.
+
+1. **Pick the narrowest relevant check** for the change (single test file → package tests → full suite).
+2. **Run it** and read the output, not just the exit code.
+3. **Widen** to typecheck, lint, build and the full suite before declaring done.
+4. **Inspect the final diff** for debug output, stray files and unrelated edits.
+5. **Report** a table of exact commands and observed results. Mark anything not run as *not run*.

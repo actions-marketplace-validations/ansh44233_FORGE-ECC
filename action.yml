@@ -10,15 +10,28 @@ inputs:
   version:
     description: FORGE Git ref to install (tag, branch, or commit)
     required: false
-    default: v1.0.0
+    default: v2.0.0
   project-path:
     description: Repository directory to analyze
     required: false
     default: .
   operation:
-    description: Safe built-in operation to run
+    description: Safe built-in operation to run (inspect, quality, health, review, shield)
     required: false
     default: inspect
+  fail-on:
+    description: For the shield operation, fail the step when a finding at or above this severity exists (critical, high, medium, low). Empty never fails.
+    required: false
+    default: ""
+  sarif-file:
+    description: For the shield operation, write SARIF to this path (upload it with github/codeql-action/upload-sarif).
+    required: false
+    default: forge-shield.sarif
+
+outputs:
+  sarif-file:
+    description: Path of the SARIF file written by the shield operation
+    value: ${{ steps.forge.outputs.sarif-file }}
 
 runs:
   using: composite
@@ -36,10 +49,13 @@ runs:
         npm install --global "git+https://github.com/ansh44233/FORGE-ECC.git#${FORGE_VERSION}"
         forge --version
     - name: Run FORGE
+      id: forge
       shell: bash
       env:
         FORGE_PROJECT_PATH: ${{ inputs.project-path }}
         FORGE_OPERATION: ${{ inputs.operation }}
+        FORGE_FAIL_ON: ${{ inputs.fail-on }}
+        FORGE_SARIF_FILE: ${{ inputs.sarif-file }}
       run: |
         set -euo pipefail
         case "$FORGE_OPERATION" in
@@ -47,5 +63,12 @@ runs:
           quality) forge quality "$FORGE_PROJECT_PATH" ;;
           health) forge health "$FORGE_PROJECT_PATH" ;;
           review) forge review "$FORGE_PROJECT_PATH" ;;
+          shield)
+            args=(shield "$FORGE_PROJECT_PATH" --sarif "$FORGE_SARIF_FILE")
+            if [[ -n "$FORGE_FAIL_ON" ]]; then args+=(--fail-on "$FORGE_FAIL_ON"); fi
+            echo "sarif-file=$FORGE_SARIF_FILE" >> "$GITHUB_OUTPUT"
+            if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then forge shield "$FORGE_PROJECT_PATH" --markdown >> "$GITHUB_STEP_SUMMARY" || true; fi
+            forge "${args[@]}"
+            ;;
           *) echo "Unsupported FORGE operation: $FORGE_OPERATION" >&2; exit 2 ;;
         esac

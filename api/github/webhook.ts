@@ -7,6 +7,12 @@ import {
   verifyGitHubSignature,
   type GitHubInstallation,
 } from "../_lib/github-app.js";
+import path from "node:path";
+import { GitHubClient } from "../../src/github/github-client.js";
+import { handleGitHubEvent } from "../../src/github/app-handlers.js";
+
+const FORGE_VERSION = "2.0.0";
+const APP_EVENTS = new Set(["issue_comment", "pull_request"]);
 
 export const config = { api: { bodyParser: false } };
 
@@ -52,7 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let payload: {
     action?: string;
     installation?: GitHubInstallation;
-  };
+  } & AppPayload;
   try {
     payload = JSON.parse(rawBody.toString("utf8"));
   } catch {
@@ -61,6 +67,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const event = req.headers["x-github-event"];
   if (typeof event !== "string") return res.status(400).json({ error: "Missing event header" });
+  if (APP_EVENTS.has(event)) {
+    return handleAppEvent(req, res, event, payload as AppPayload, appId);
+  }
   if (event !== "installation" && event !== "installation_repositories") {
     return res.status(200).json({ received: true, ignored: true });
   }
@@ -93,5 +102,48 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ received: true, stored: true });
   } catch {
     return res.status(500).json({ error: "Could not persist installation event" });
+  }
+}
+
+type AppPayload = {
+  installation?: { id?: number };
+  repository?: { name?: string; full_name?: string };
+};
+
+async function handleAppEvent(req: VercelRequest, res: VercelResponse, event: string, payload: AppPayload, appId: number) {
+  const installationId = payload.installation?.id;
+  const repositoryName = payload.repository?.name;
+  const privateKey = process.env.GITHUB_APP_PRIVATE_KEY;
+  if (!isValidInstallationId(installationId) || !repositoryName) {
+    return res.status(400).json({ error: "Event is missing installation or repository" });
+  }
+  if (!privateKey) return res.status(503).json({ error: "GitHub App private key is not configured" });
+
+  // GitHub redelivers on timeouts; process each delivery once.
+  const deliveryHeader = req.headers["x-github-delivery"];
+  const delivery = Array.isArray(deliveryHeader) ? deliveryHeader[0] : deliveryHeader;
+  if (delivery && /^[A-Za-z0-9-]{8,80}$/.test(delivery)) {
+    try {
+      const fresh = await redisCommand<string | null>(["SET", `forge:github:delivery:${delivery}`, "1", "NX", "EX", 86400]);
+      if (fresh === null) return res.status(200).json({ received: true, duplicate: true });
+    } catch {
+      // Redis unavailable: continue; handlers are idempotent where it matters (branch reuse, check runs).
+    }
+  }
+
+  try {
+    const client = await GitHubClient.forInstallation({ appId, privateKey, installationId, repositories: [repositoryName] });
+    const result = await handleGitHubEvent({ client, forgeVersion: FORGE_VERSION, catalogRoot: path.join(process.cwd(), "catalog") }, event, payload);
+    const fullName = payload.repository?.full_name?.toLowerCase();
+    if (result.handled && fullName && /^[a-z0-9-]{1,39}\/[a-z0-9._-]{1,100}$/.test(fullName)) {
+      // Activity feed for the hosted dashboard (latest 50 events per repository).
+      const entry = JSON.stringify({ at: new Date().toISOString(), event, action: result.action, ...(result.detail ? { detail: result.detail.slice(0, 200) } : {}), ...(result.url ? { url: result.url } : {}) });
+      await redisCommand(["LPUSH", `forge:repo:${fullName}:events`, entry]).catch(() => undefined);
+      await redisCommand(["LTRIM", `forge:repo:${fullName}:events`, 0, 49]).catch(() => undefined);
+    }
+    return res.status(200).json({ received: true, ...result });
+  } catch (error) {
+    const message = error instanceof Error ? error.message.slice(0, 200) : "unknown error";
+    return res.status(500).json({ error: "FORGE could not process the event", detail: message });
   }
 }

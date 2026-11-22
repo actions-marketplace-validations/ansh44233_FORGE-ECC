@@ -1,7 +1,7 @@
 <!-- FORGE — AI Harness for software engineering -->
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ansh44233/FORGE-ECC/main/docs/forge-dashboard.png" alt="FORGE AI Harness dashboard" width="100%" />
+  <img src="https://github.com/ansh44233/FORGE-ECC/blob/main/docs/forge-dashboard.png" alt="FORGE AI Harness dashboard" width="100%" />
 </p>
 
 <h1 align="center">FORGE — The AI Harness</h1>
@@ -66,7 +66,7 @@
 ---
 
 > [!NOTE]
-> **FORGE v1.0.0 — AI harness foundation.** The local CLI, local dashboard, agent orchestration, MCP server, provider adapters, GitHub Action and GitHub App installation/authentication foundation are available. The GitHub App does not yet perform hosted repository scans or create pull requests. See [Current capabilities and boundaries](#current-capabilities-and-boundaries).
+> **FORGE 2.0 — the verified agent harness.** Install FORGE agents, skills, commands and rules into Claude Code, Cursor, Codex, OpenCode and Gemini; guard risky actions with runtime hooks; scan agent configuration with Shield; get setup pull requests and PR risk checks from the GitHub App; and see it all in the hosted dashboard at [forge-ecc.vercel.app/app](https://forge-ecc.vercel.app/app/). Everything from 1.0 still works. See [CHANGELOG](CHANGELOG.md).
 
 ## What is FORGE?
 
@@ -115,7 +115,16 @@ git --version
 Install the released CLI directly from the GitHub repository:
 
 ```bash
-npm install --global git+https://github.com/ansh44233/FORGE-ECC.git#v1.0.0
+npm install --global git+https://github.com/ansh44233/FORGE-ECC.git#v2.0.0
+```
+
+Add FORGE to the project you work on (preview first, then install with runtime hooks):
+
+```bash
+cd /path/to/your-project
+forge install . --dry-run
+forge install . --hooks
+forge shield .
 ```
 
 Verify the installation:
@@ -153,7 +162,7 @@ npm --version
 git --version
 
 # Install FORGE
-npm install --global git+https://github.com/ansh44233/FORGE-ECC.git#v1.0.0
+npm install --global git+https://github.com/ansh44233/FORGE-ECC.git#v2.0.0
 
 # Move into your project
 cd C:\Users\YourName\Projects\my-project
@@ -178,6 +187,100 @@ npm run typecheck
 npm test
 npm run build
 ```
+
+## Install FORGE into your agent harness (2.0)
+
+`forge install` adds FORGE's agents, skills, slash commands and coding rules to the tools you already use. It writes the native format for each tool:
+
+| Target | What gets written |
+|---|---|
+| `claude` | `.claude/agents/forge-*.md`, `.claude/skills/forge-*/SKILL.md`, `.claude/commands/forge/*.md` (→ `/forge:plan`), `.claude/rules/forge/**` |
+| `cursor` | `.cursor/rules/forge-*.mdc`, `.cursor/commands/forge-*.md` |
+| `codex` | managed block in `AGENTS.md`, `.agents/skills/forge-*/SKILL.md`, `.forge/harness/**` |
+| `opencode` | `.opencode/agent/forge-*.md`, `.opencode/command/forge-*.md`, managed block in `AGENTS.md` |
+| `gemini` | `.gemini/commands/forge/*.toml`, managed block in `GEMINI.md` |
+
+```bash
+forge catalog                                  # browse agents, skills, commands, rules
+forge install . --dry-run                      # preview every file first
+forge install . --target claude,cursor --profile standard
+forge doctor .                                 # missing / modified / outdated files
+forge repair .                                 # restore missing files, keep your edits
+forge uninstall .                              # remove only unmodified FORGE files
+```
+
+Profiles: `minimal` (core agents, commands, always-on rules), `standard` (default; adds skills and rules for detected languages), `full` (everything). Override language detection with `--lang ts,python,go,rust,java`.
+
+Safety: every written file is hashed in `.forge/install-state.json`. FORGE never overwrites a file it did not write or that you edited (unless you pass `--force`), only edits text inside its own `<!-- forge:begin -->` block in `AGENTS.md` / `GEMINI.md`, and refuses to write through symlinks.
+
+## FORGE Shield — agent harness security (2.0)
+
+`forge shield` reviews the configuration that controls your coding agents and scores it 0–100:
+
+- **Permissions** — `bypassPermissions`, blanket `Bash(*)`, auto-trusted MCP servers, missing `.env` deny rules (Claude Code settings)
+- **Hooks** — remote code piped into a shell, outbound network calls, destructive or obfuscated commands, catch-all matchers
+- **MCP servers** — plain-HTTP remotes, unpinned `npx` packages, filesystem servers rooted at `/` or `~`, literal secrets in `env`/headers (Claude, Cursor, VS Code, Gemini, OpenCode)
+- **Prompt injection** — invisible/bidi Unicode, "ignore previous instructions" phrases, hidden HTML comments addressed to the agent (defensive guidance that quotes these phrases is not flagged)
+- **Secrets** — known token formats and private keys in agent files (values are never printed)
+- **CI** — `pull_request_target` checking out PR code, `write-all` tokens, event text interpolated into `run:`
+
+```bash
+forge shield .                       # human report with score and grade
+forge shield . --fix --dry-run       # preview safe automatic fixes
+forge shield . --fix                 # add .env deny rules, strip invisible Unicode
+forge shield . --sarif shield.sarif --fail-on high   # CI gate + GitHub code scanning
+```
+
+GitHub Action:
+
+```yaml
+- uses: ansh44233/FORGE-ECC@v2.0.0
+  with:
+    operation: shield
+    fail-on: high
+- uses: github/codeql-action/upload-sarif@v3
+  if: always()
+  with:
+    sarif_file: forge-shield.sarif
+```
+
+## Runtime hooks and layered memory (2.0)
+
+`forge install --hooks` merges four FORGE hooks into `.claude/settings.json` (your own hooks and settings are kept; uninstall removes only FORGE entries):
+
+| Hook | What it does |
+|---|---|
+| `PreToolUse` → `forge hook pre-tool` | **FORGE Guard** — denies catastrophic commands (`rm -rf ~`, `curl … \| sh`, disk writes, fork bombs, `.git` internals); asks before force-push, pushes to `main`, `git reset --hard`, `DROP TABLE`, publishing, deploys, `sudo`, reading or writing secrets, and edits to agent permissions/MCP/CI files |
+| `PostToolUse` → `forge hook post-edit` | records edited files; when an agent edits its own settings, MCP config or instructions, runs Shield and tells the agent about high-risk changes |
+| `Stop` → `forge hook stop` | optional verification gate: runs configured npm scripts if files changed and sends failures back to the agent (never loops) |
+| `SessionStart` → `forge hook session-start` | injects the latest handoff and relevant project memory |
+
+Configure in `.forge/harness-hooks.json`:
+
+```json
+{
+  "guard": { "enabled": true, "allow": ["^rm -rf dist$"] },
+  "verifyOnStop": { "scripts": ["typecheck", "test"], "timeoutMs": 180000 },
+  "sessionContext": { "enabled": true, "maxTokens": 900 }
+}
+```
+
+Memory is layered (project `.forge/memory.json`, global `~/.forge/memory.json`), keeps provenance (`source`, `evidence`), rejects credentials, and ranks results by relevance and recency:
+
+```bash
+forge memory add . --kind decision --content "Use zod at API boundaries" --evidence src/schema.ts
+forge memory add --global --kind preference --content "Prefer pnpm"
+forge memory search . --query "validation"
+forge memory handoff . --content "Login form done; next: e2e tests"
+```
+
+The MCP server exposes the same memory to every harness (`forge_memory_search`, `forge_memory_add`) plus `forge_shield_scan`.
+
+## GitHub App (2.0)
+
+Comment `/forge analyze` on an issue to get a pull request that sets up FORGE for the repository, including a generated `forge-project` skill with the repo's real verify commands and conventions. Every pull request gets a **FORGE** check with an explainable change-risk score and Shield annotations. Commands: `analyze`, `repair`, `audit`, `doctor`, `risk`, `help`. Locally, `forge analyze . --write` generates the same project skill. See [docs/integrations/github-app.md](docs/integrations/github-app.md) for permissions.
+
+The hosted dashboard at [`/app/`](https://forge-ecc.vercel.app/app/) (sign in with GitHub) shows, for every repository you can access through the app: Shield score and findings, FORGE setup health, change risk for open pull requests, the detected stack and verify commands, and FORGE activity — with one-click setup/repair pull requests for collaborators with write access.
 
 ## Features
 
@@ -527,9 +630,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ansh44233/FORGE-ECC@v1.0.0
+      - uses: ansh44233/FORGE-ECC@v2.0.0
         with:
-          version: v1.0.0
+          version: v2.0.0
           project-path: .
           operation: inspect
 ```
@@ -769,7 +872,7 @@ For questions about FORGE or help with the GitHub App, contact [THEGODOFEARTH3@g
 
 FORGE is open source under the [MIT License](LICENSE).
 
-## Star history
+## Star history 
 
 <p align="center">
   <a href="https://www.star-history.com/ansh44233/FORGE-ECC">

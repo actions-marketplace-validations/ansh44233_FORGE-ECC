@@ -45,10 +45,17 @@ import { analyzeChangeIntelligence, formatChangeIntelligence } from "./core/chan
 import { captureIntelligenceSnapshot, compareLatestIntelligence, formatIntelligenceComparison } from "./core/intelligence-timeline.js";
 import { analyzeDependencies, formatDependencyIntelligence } from "./core/dependency-intelligence.js";
 import { generateRemediationPlan, formatRemediationPlan } from "./core/remediation-planner.js";
-import { addProjectMemory, buildProjectMemoryContext, listProjectMemory, removeProjectMemory, type ProjectMemoryKind } from "./core/project-memory.js";
+import { addProjectMemory, buildProjectMemoryContext, globalMemoryRoot, latestHandoff, listProjectMemory, PROJECT_MEMORY_KINDS, removeProjectMemory, searchMemory, type ProjectMemoryKind } from "./core/project-memory.js";
+import { HOOK_EVENTS, runHarnessHook, type HookEventName } from "./core/harness-hooks.js";
+import { analyzeRepository, collectLocalRepository, formatRepoProfile, renderProjectSkill } from "./github/repo-analysis.js";
+import { mkdir as mkdirAsync } from "node:fs/promises";
 import { formatSkillContext, loadSkillRegistry, selectSkills } from "./core/skill-registry.js";
 import { applyBeforeAgentHooks, loadHooks } from "./core/hook-engine.js";
 import { assertSupportedAgentPolicy, loadPermissionPolicy } from "./core/permission-policy.js";
+import { doctorHarness, formatDoctorReport, formatInstallResult, formatUninstallResult, installHarness, parseProfile, parseTargets, uninstallHarness } from "./core/harness-installer.js";
+import { loadHarnessCatalog, type CatalogKind } from "./core/harness-catalog.js";
+import { applyShieldFixes, formatShieldMarkdown, formatShieldReport, parseSeverity, runShield, severityAtLeast, toSarif } from "./core/forge-shield.js";
+import { writeFile as writeTextFile } from "node:fs/promises";
 import { ModelRouter } from "./core/model-router.js";
 import { loadExecutionTrace, saveExecutionTrace } from "./core/execution-trace.js";
 import { createReplayRun } from "./core/run-replay.js";
@@ -120,7 +127,7 @@ function readAgentDurationBudgets(): Record<string, number> | undefined {
   return budgets;
 }
 
-const VERSION = "1.0.0";
+const VERSION = "2.0.0";
 
 const HELP = `
 FORGE — The AI Engineering Workbench
@@ -130,6 +137,16 @@ Usage:
 
 Commands:
   init [path]      Create a safe, local-first .forge starter workspace
+  install [path]   Install FORGE agents, skills, commands and rules into Claude Code, Cursor, Codex, OpenCode and Gemini
+                   [--target claude,cursor,codex,opencode,gemini|all] [--profile minimal|standard|full] [--lang ts,python] [--hooks] [--dry-run] [--force]
+  analyze [path]   Learn the repo (stack, scripts, tests, commit style) and generate a project skill [--write] [--json]
+  hook EVENT       Claude Code runtime hook (pre-tool, post-edit, stop, session-start); reads hook JSON on stdin
+  uninstall [path] Remove unmodified FORGE harness files and managed blocks [--dry-run] [--force]
+  doctor [path]    Check installed harness files for missing, modified or outdated entries
+  repair [path]    Restore missing and outdated harness files (keeps local edits)
+  catalog          List the FORGE catalog [--kind agent|skill|command|rule] [--json]
+  shield [path]    Security review of agent settings, hooks, MCP servers, instructions and workflows
+                   [--json] [--markdown] [--sarif FILE] [--fix] [--dry-run] [--fail-on critical|high|medium|low]
   inspect [path]   Analyze project languages, tooling, dependencies, and scripts
   evaluate RUNID  Score a saved run against a local evaluation suite
   benchmark [RUN_ID] [--suite SUITE_ID] [--path PROJECT]  Record or view benchmark results
@@ -160,7 +177,7 @@ Commands:
   sandbox-policy-check POLICY.json Validate a fail-closed sandbox policy file\n  sandbox-profiles [NAME] List or inspect built-in sandbox security profiles\n  sandbox-cleanup        Review stopped FORGE containers; add --apply to remove them\n  sandbox-cleanup-history [PATH] Show recorded cleanup activity
   verify-history   List saved verification runs for a project
   map [path]       Map source modules and import relationships
-  agents [path]    List built-in and workspace agent roles\n  memory <action>  Manage local project memory (add, list, remove, context)\n  skills [path]    List built-in and workspace skills\n  hooks [path]     List configured declarative lifecycle hooks\n  agent-security [path] Audit agent instructions, skills, hooks, and permissions
+  agents [path]    List built-in and workspace agent roles\n  memory <action>  Manage layered memory (add, list, remove, context, search, handoff; --global for cross-project)\n  skills [path]    List built-in and workspace skills\n  hooks [path]     List configured declarative lifecycle hooks\n  agent-security [path] Audit agent instructions, skills, hooks, and permissions
   plan --goal TEXT Create and save a reviewable draft plan
   run --goal TEXT  Run the plan using a configured AI provider
   runs [path]      List locally saved run history (add --json for versioned JSON)\n  evals [path]     List local agent evaluation suites
@@ -191,6 +208,36 @@ Examples:
   forge dashboard .
 `.trim();
 
+const LANGUAGE_ALIASES: Record<string, string> = { ts: "typescript", js: "typescript", javascript: "typescript", py: "python", go: "golang", rs: "rust", kotlin: "java", kt: "java" };
+function normalizeLanguage(value: string): string {
+  const key = value.trim().toLowerCase();
+  return LANGUAGE_ALIASES[key] ?? key;
+}
+
+function parseHarnessArgs(args: string[], valueOptions: string[], flagOptions: string[]): { path: string; values: Map<string, string>; flags: Set<string> } {
+  const values = new Map<string, string>();
+  const flags = new Set<string>();
+  const positional: string[] = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index] ?? "";
+    if (valueOptions.includes(arg)) {
+      const value = args[index + 1];
+      if (value === undefined || value.startsWith("--")) throw new Error(arg + " requires a value");
+      if (values.has(arg)) throw new Error(arg + " may only be given once");
+      values.set(arg, value);
+      index += 1;
+    } else if (flagOptions.includes(arg)) {
+      flags.add(arg);
+    } else if (arg.startsWith("--")) {
+      throw new Error("Unknown option " + arg);
+    } else {
+      positional.push(arg);
+    }
+  }
+  if (positional.length > 1) throw new Error("Expected at most one project path");
+  return { path: path.resolve(positional[0] ?? "."), values, flags };
+}
+
 async function main(args: string[]): Promise<void> {
   const [command = "help", ...rest] = args;
   switch (command) {
@@ -214,6 +261,153 @@ async function main(args: string[]): Promise<void> {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         process.stderr.write(`FORGE could not initialize this project: ${message}\n`);
+        process.exitCode = 1;
+      }
+      return;
+    }
+    case "install":
+    case "repair": {
+      if (rest.includes("--help")) {
+        process.stdout.write("Usage: forge " + command + " [path] [--target LIST|all] [--profile minimal|standard|full] [--lang LIST] [--hooks|--no-hooks] [--hook-command CMD] [--dry-run] [--force] [--json]\n");
+        return;
+      }
+      try {
+        const options = parseHarnessArgs(rest, ["--target", "--profile", "--lang", "--hook-command"], ["--dry-run", "--force", "--json", "--hooks", "--no-hooks"]);
+        if (options.flags.has("--hooks") && options.flags.has("--no-hooks")) throw new Error("Use either --hooks or --no-hooks");
+        const existing = command === "repair" ? await doctorHarness({ projectPath: options.path, forgeVersion: VERSION }) : undefined;
+        if (command === "repair" && !existing?.installed) throw new Error("FORGE harness is not installed here. Run `forge install` first.");
+        const result = await installHarness({
+          projectPath: options.path,
+          forgeVersion: VERSION,
+          dryRun: options.flags.has("--dry-run"),
+          force: options.flags.has("--force"),
+          hooks: options.flags.has("--hooks") || (!options.flags.has("--no-hooks") && Boolean(existing?.hooks ?? (await doctorHarness({ projectPath: options.path, forgeVersion: VERSION }).catch(() => undefined))?.hooks)),
+          ...(options.values.has("--hook-command") ? { hookCommand: options.values.get("--hook-command") as string } : {}),
+          profile: parseProfile(options.values.get("--profile") ?? existing?.profile),
+          targets: options.values.has("--target") ? parseTargets(options.values.get("--target")) : (existing?.targets ?? parseTargets("all")),
+          ...(options.values.has("--lang") ? { languages: (options.values.get("--lang") ?? "").split(",").map(v => normalizeLanguage(v)).filter(Boolean) } : existing?.languages ? { languages: existing.languages } : {}),
+        });
+        process.stdout.write(options.flags.has("--json") ? JSON.stringify({ ...result, plan: { ...result.plan, files: result.plan.files.map(f => ({ path: f.path, targets: f.targets, item: f.item })) } }, null, 2) + "\n" : formatInstallResult(result) + "\n");
+        if (result.conflicts) process.exitCode = 3;
+      } catch (error) {
+        process.stderr.write("FORGE could not " + command + ": " + (error instanceof Error ? error.message : String(error)) + "\n");
+        process.exitCode = 1;
+      }
+      return;
+    }
+    case "uninstall": {
+      try {
+        const options = parseHarnessArgs(rest, [], ["--dry-run", "--force", "--json"]);
+        const result = await uninstallHarness({ projectPath: options.path, dryRun: options.flags.has("--dry-run"), force: options.flags.has("--force") });
+        process.stdout.write(options.flags.has("--json") ? JSON.stringify(result, null, 2) + "\n" : formatUninstallResult(result) + "\n");
+      } catch (error) {
+        process.stderr.write("FORGE could not uninstall: " + (error instanceof Error ? error.message : String(error)) + "\n");
+        process.exitCode = 1;
+      }
+      return;
+    }
+    case "doctor": {
+      try {
+        const options = parseHarnessArgs(rest, [], ["--json"]);
+        const report = await doctorHarness({ projectPath: options.path, forgeVersion: VERSION });
+        process.stdout.write(options.flags.has("--json") ? JSON.stringify(report, null, 2) + "\n" : formatDoctorReport(report) + "\n");
+        if (report.installed && !report.healthy) process.exitCode = 2;
+      } catch (error) {
+        process.stderr.write("FORGE doctor failed: " + (error instanceof Error ? error.message : String(error)) + "\n");
+        process.exitCode = 1;
+      }
+      return;
+    }
+    case "catalog": {
+      try {
+        const options = parseHarnessArgs(rest, ["--kind"], ["--json"]);
+        const kind = options.values.get("--kind");
+        if (kind && !["agent", "skill", "command", "rule"].includes(kind)) throw new Error("--kind must be agent, skill, command or rule");
+        const catalog = await loadHarnessCatalog();
+        const items = catalog.items.filter(item => !kind || item.kind === (kind as CatalogKind));
+        if (options.flags.has("--json")) {
+          process.stdout.write(JSON.stringify(items.map(({ body: _body, ...item }) => item), null, 2) + "\n");
+        } else {
+          const counts = ["agent", "skill", "command", "rule"].map(k => catalog.items.filter(i => i.kind === k).length);
+          process.stdout.write("FORGE catalog: " + counts[0] + " agents · " + counts[1] + " skills · " + counts[2] + " commands · " + counts[3] + " rules\n\n");
+          for (const item of items) process.stdout.write("  " + item.kind.padEnd(8) + (item.language ? item.language + "/" : "") + item.id.padEnd(item.language ? 28 - item.language.length - 1 : 28) + " " + item.profile.padEnd(9) + item.description + "\n");
+        }
+      } catch (error) {
+        process.stderr.write("FORGE catalog failed: " + (error instanceof Error ? error.message : String(error)) + "\n");
+        process.exitCode = 1;
+      }
+      return;
+    }
+    case "analyze": {
+      try {
+        const options = parseHarnessArgs(rest, [], ["--write", "--json"]);
+        const profile = analyzeRepository(await collectLocalRepository(options.path));
+        if (options.flags.has("--json")) process.stdout.write(JSON.stringify(profile, null, 2) + "\n");
+        else process.stdout.write(formatRepoProfile(profile) + "\n");
+        if (options.flags.has("--write")) {
+          const skill = renderProjectSkill(profile);
+          for (const relative of [".claude/skills/forge-project/SKILL.md", ".agents/skills/forge-project/SKILL.md"]) {
+            const target = path.join(options.path, relative);
+            await mkdirAsync(path.dirname(target), { recursive: true });
+            await writeTextFile(target, skill, "utf8");
+            if (!options.flags.has("--json")) process.stdout.write("  wrote " + relative + "\n");
+          }
+        } else if (!options.flags.has("--json")) {
+          process.stdout.write("\nRun with --write to save the forge-project skill for Claude Code and Codex/OpenCode.\n");
+        }
+      } catch (error) {
+        process.stderr.write("FORGE analyze failed: " + (error instanceof Error ? error.message : String(error)) + "\n");
+        process.exitCode = 1;
+      }
+      return;
+    }
+    case "hook": {
+      const event = rest[0] as HookEventName | undefined;
+      if (!event || !HOOK_EVENTS.includes(event)) {
+        process.stderr.write("Usage: forge hook " + HOOK_EVENTS.join("|") + "  (reads Claude Code hook JSON on stdin)\n");
+        process.exitCode = 1;
+        return;
+      }
+      const chunks: Buffer[] = [];
+      let size = 0;
+      if (!process.stdin.isTTY) {
+        for await (const chunk of process.stdin) {
+          const part = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
+          size += part.length;
+          if (size > 4 * 1024 * 1024) break;
+          chunks.push(part);
+        }
+      }
+      const output = await runHarnessHook(event, Buffer.concat(chunks).toString("utf8"));
+      if (output.json) process.stdout.write(JSON.stringify(output.json) + "\n");
+      process.exitCode = output.exitCode;
+      return;
+    }
+    case "shield": {
+      if (rest.includes("--help")) {
+        process.stdout.write("Usage: forge shield [path] [--json] [--markdown] [--sarif FILE] [--fix] [--dry-run] [--fail-on critical|high|medium|low]\n");
+        return;
+      }
+      try {
+        const options = parseHarnessArgs(rest, ["--sarif", "--fail-on"], ["--json", "--markdown", "--fix", "--dry-run"]);
+        const failOn = options.values.has("--fail-on") ? parseSeverity(options.values.get("--fail-on")) : undefined;
+        let report = await runShield(options.path);
+        if (options.flags.has("--fix")) {
+          const fixes = await applyShieldFixes(options.path, report, { dryRun: options.flags.has("--dry-run") });
+          const verb = options.flags.has("--dry-run") ? "would fix" : "fixed";
+          if (!options.flags.has("--json")) {
+            process.stdout.write(fixes.length ? fixes.map(fix => "  " + verb + "  " + fix.file + "  " + fix.ruleId + ": " + fix.description).join("\n") + "\n\n" : "No automatic fixes were applicable.\n\n");
+          }
+          if (!options.flags.has("--dry-run") && fixes.length) report = await runShield(options.path);
+        }
+        const sarifPath = options.values.get("--sarif");
+        if (sarifPath) await writeTextFile(path.resolve(sarifPath), JSON.stringify(toSarif(report, VERSION), null, 2) + "\n", "utf8");
+        if (options.flags.has("--json")) process.stdout.write(JSON.stringify(report, null, 2) + "\n");
+        else if (options.flags.has("--markdown")) process.stdout.write(formatShieldMarkdown(report) + "\n");
+        else process.stdout.write(formatShieldReport(report) + "\n");
+        if (failOn && report.findings.some(item => severityAtLeast(item.severity, failOn))) process.exitCode = 2;
+      } catch (error) {
+        process.stderr.write("FORGE shield failed: " + (error instanceof Error ? error.message : String(error)) + "\n");
         process.exitCode = 1;
       }
       return;
@@ -732,8 +926,9 @@ async function main(args: string[]): Promise<void> {
     }
     case "memory": {
       const [action = "list", ...memoryArgs] = rest;
-      const targetIndex = memoryArgs.findIndex(arg => !arg.startsWith("--"));
-      const target = path.resolve(targetIndex >= 0 ? memoryArgs[targetIndex] ?? "." : ".");
+      const valueOptions = new Set(["--kind", "--content", "--tags", "--query", "--evidence", "--limit"]);
+      const positional = memoryArgs.filter((arg, index) => !arg.startsWith("--") && !valueOptions.has(memoryArgs[index - 1] ?? "") && !arg.startsWith("mem-"));
+      const target = path.resolve(positional[0] ?? ".");
       const option = (name: string) => { const index = memoryArgs.indexOf(name); return index >= 0 ? memoryArgs[index + 1] : undefined; };
       try {
         if (action === "list") {
@@ -742,11 +937,29 @@ async function main(args: string[]): Promise<void> {
         } else if (action === "add") {
           const kind = option("--kind") as ProjectMemoryKind | undefined;
           const content = option("--content");
-          const allowed: ProjectMemoryKind[] = ["decision", "architecture", "constraint", "preference", "fact"];
-          if (!kind || !allowed.includes(kind) || !content) throw new Error("Usage: forge memory add [path] --kind decision|architecture|constraint|preference|fact --content TEXT [--tags a,b]");
+          const allowed = PROJECT_MEMORY_KINDS;
+          if (!kind || !allowed.includes(kind) || !content) throw new Error("Usage: forge memory add [path] --kind " + allowed.join("|") + " --content TEXT [--tags a,b] [--evidence path,commit] [--global]");
           const tags = option("--tags")?.split(",") ?? [];
-          const entry = await addProjectMemory(target, { kind, content, tags });
-          process.stdout.write(`Saved ${entry.id} to .forge/memory.json\n`);
+          const evidence = option("--evidence")?.split(",").map(item => item.trim()).filter(Boolean);
+          const layerRoot = memoryArgs.includes("--global") ? globalMemoryRoot() : target;
+          const entry = await addProjectMemory(layerRoot, { kind, content, tags, source: "cli", ...(evidence?.length ? { evidence } : {}) });
+          process.stdout.write(`Saved ${entry.id} to ${memoryArgs.includes("--global") ? "global" : "project"} memory\n`);
+        } else if (action === "handoff") {
+          const content = option("--content");
+          if (content) {
+            const entry = await addProjectMemory(target, { kind: "handoff", content, source: "cli" });
+            process.stdout.write(`Saved handoff ${entry.id}. The next Claude Code session will receive it when FORGE hooks are installed.\n`);
+          } else {
+            const handoff = await latestHandoff(target);
+            process.stdout.write(handoff ? `${handoff.updatedAt}\n${handoff.content}\n` : "No handoff saved. Save one with: forge memory handoff [path] --content TEXT\n");
+          }
+        } else if (action === "search") {
+          const query = option("--query") ?? "";
+          const limit = Number(option("--limit") ?? 10);
+          if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new Error("--limit must be an integer from 1 to 100.");
+          const hits = await searchMemory(target, query, { limit, includeGlobal: !memoryArgs.includes("--project-only") });
+          if (memoryArgs.includes("--json")) process.stdout.write(JSON.stringify(hits, null, 2) + "\n");
+          else process.stdout.write(hits.length ? hits.map(hit => `${hit.score.toFixed(2).padStart(6)}  ${hit.layer.padEnd(7)} ${hit.entry.id} [${hit.entry.kind}] ${hit.entry.content}${hit.entry.evidence?.length ? "  (evidence: " + hit.entry.evidence.join(", ") + ")" : ""}`).join("\n") + "\n" : "No matching memory.\n");
         } else if (action === "remove") {
           const id = memoryArgs.find(arg => arg.startsWith("mem-"));
           if (!id) throw new Error("Usage: forge memory remove [path] mem-ID");
@@ -757,7 +970,7 @@ async function main(args: string[]): Promise<void> {
           const context = await buildProjectMemoryContext(target, query);
           process.stdout.write(context.text || "No relevant project memory.\n");
         } else {
-          throw new Error("Memory actions: add, list, remove, context.");
+          throw new Error("Memory actions: add, list, remove, context, search, handoff.");
         }
       } catch (error) {
         process.stderr.write("FORGE memory command failed: " + (error instanceof Error ? error.message : String(error)) + "\n");

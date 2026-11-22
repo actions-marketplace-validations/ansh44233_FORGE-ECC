@@ -124,6 +124,30 @@ describe("FORGE MCP stdio protocol integration", () => {
     expect(denied.result?.isError).toBe(true);
     expect(denied.result.content[0].text).toMatch(/outside|workspace-relative/i);
 
+    expect(toolNames).toContain("forge_memory_search");
+    expect(toolNames).toContain("forge_memory_add");
+    expect(toolNames).toContain("forge_shield_scan");
+    const saved = await request("tools/call", {
+      name: "forge_memory_add",
+      arguments: { kind: "decision", content: "Answers are exported from src/index.ts", evidence: ["src/index.ts"] }
+    });
+    expect(saved.result?.isError).not.toBe(true);
+    const leaked = await request("tools/call", {
+      name: "forge_memory_add",
+      arguments: { kind: "fact", content: "api_key=should-not-be-saved" }
+    });
+    expect(leaked.result?.isError).toBe(true);
+    const recalled = await request("tools/call", {
+      name: "forge_memory_search",
+      arguments: { query: "answers exported", includeGlobal: false }
+    });
+    const recalledText = recalled.result.content.find((part: { type: string }) => part.type === "text")?.text ?? "";
+    expect(recalledText).toContain("Answers are exported");
+    expect(recalledText).toContain("src/index.ts");
+    const shield = await request("tools/call", { name: "forge_shield_scan", arguments: {} });
+    expect(shield.result?.isError).not.toBe(true);
+    expect(shield.result.content[0].text).toContain('"tool": "forge-shield"');
+
     child!.stdin.end();
     lines.close();
   });

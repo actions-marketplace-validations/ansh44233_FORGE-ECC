@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b0a0e">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/svg+xml" href="/forge-mark.svg">
+<title>FORGE Dashboard</title>
+<style>
+:root{color-scheme:dark;--bg:#0b0a0e;--panel:#141217;--panel2:#1a171d;--ink:#f4f0ed;--muted:#a59d9b;--faint:#6f6866;--line:rgba(235,218,210,.12);--line2:rgba(235,218,210,.2);--accent:#e8b3a2;--accent2:#a9c5d2;--ok:#9fd5a4;--warn:#f0c77a;--high:#f29b7c;--crit:#ff6b6b;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:radial-gradient(1200px 600px at 85% -10%,rgba(232,179,162,.08),transparent 60%),var(--bg);color:var(--ink);font:14px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
+a{color:inherit}
+button{font:inherit;color:inherit}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:16px;padding:12px 22px;border-bottom:1px solid var(--line);background:rgba(11,10,14,.86);backdrop-filter:blur(12px)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.08em;text-decoration:none}
+.brand img{width:26px;height:26px}
+.brand small{font-weight:600;letter-spacing:.02em;color:var(--muted)}
+.spacer{flex:1}
+.who{color:var(--muted);font-size:13px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;border:1px solid var(--line2);background:rgba(255,255,255,.04);font-weight:650;font-size:13px;text-decoration:none;cursor:pointer;transition:border-color .15s,background .15s}
+.btn:hover{border-color:var(--accent);background:rgba(232,179,162,.08)}
+.btn.primary{background:var(--accent);color:#1a1210;border-color:var(--accent)}
+.btn.primary:hover{background:#f0c4b5}
+.btn[disabled]{opacity:.5;cursor:progress}
+.layout{display:grid;grid-template-columns:280px 1fr;min-height:calc(100vh - 55px)}
+aside{border-right:1px solid var(--line);padding:16px;position:sticky;top:55px;height:calc(100vh - 55px);overflow:auto}
+aside h2{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:6px 4px 10px}
+.search{width:100%;padding:9px 11px;border-radius:9px;border:1px solid var(--line2);background:var(--panel);color:var(--ink);margin-bottom:10px}
+.repo{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:8px 10px;border-radius:8px;border:1px solid transparent;background:none;cursor:pointer;font-size:13px}
+.repo:hover{background:var(--panel)}
+.repo.active{background:var(--panel2);border-color:var(--line2)}
+.repo .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lock{font-size:10px;color:var(--faint);border:1px solid var(--line);border-radius:5px;padding:0 5px}
+main{padding:26px 30px 60px;max-width:1280px;width:100%;min-width:0}
+.card{min-width:0}
+code.loc{word-break:break-all}
+.mobile-only{display:none}
+.empty{max-width:560px;margin:12vh auto;text-align:center}
+.empty h1{font-size:34px;line-height:1.15;margin:0 0 12px}
+.empty p{color:var(--muted)}
+.empty .actions{display:flex;gap:10px;justify-content:center;margin-top:22px;flex-wrap:wrap}
+.banner{padding:12px 14px;border:1px solid rgba(240,199,122,.35);background:rgba(240,199,122,.07);border-radius:10px;margin-bottom:18px;color:#f6deb0}
+.head{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+.head h1{margin:0;font-size:24px}
+.meta{color:var(--muted);font-size:13px;margin-top:2px}
+.head .actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.card h3{margin:0 0 12px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.kpi{display:flex;align-items:center;gap:14px;min-height:74px}
+.kpi .big{font-size:28px;font-weight:800;line-height:1}
+.kpi .sub{color:var(--muted);font-size:12px;margin-top:4px}
+.ring{--v:0;--c:var(--ok);width:64px;height:64px;border-radius:50%;background:conic-gradient(var(--c) calc(var(--v)*1%),rgba(255,255,255,.07) 0);display:grid;place-items:center;flex:none}
+.ring b{width:50px;height:50px;border-radius:50%;background:var(--panel);display:grid;place-items:center;font-size:18px}
+.grid2{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;margin-bottom:14px}
+.chip{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.03em;border:1px solid currentColor}
+.sev-critical{color:var(--crit)}.sev-high{color:var(--high)}.sev-medium{color:var(--warn)}.sev-low{color:var(--accent2)}
+.lvl-low{color:var(--ok)}.lvl-medium{color:var(--warn)}.lvl-high{color:var(--high)}.lvl-critical{color:var(--crit)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{text-align:left;padding:9px 8px;border-top:1px solid var(--line);vertical-align:top}
+th{color:var(--faint);font-weight:600;font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-top:0}
+code,.mono{font-family:var(--mono);font-size:12px}
+.loc{color:var(--accent2)}
+.muted{color:var(--muted)}
+.rec{color:var(--muted);font-size:12px;margin-top:3px}
+.pr{padding:12px 0;border-top:1px solid var(--line)}
+.pr:first-of-type{border-top:0;padding-top:0}
+.pr-title{display:flex;gap:10px;align-items:baseline}
+.pr-title a{font-weight:650;text-decoration:none}
+.pr-title a:hover{text-decoration:underline}
+.bar{height:6px;border-radius:6px;background:rgba(255,255,255,.07);margin:8px 0 6px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:6px}
+.reasons{margin:0;padding-left:18px;color:var(--muted);font-size:12px}
+.langs{display:flex;height:10px;border-radius:6px;overflow:hidden;margin:4px 0 10px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
+.legend span:before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;background:var(--dot)}
+pre{margin:8px 0 0;padding:10px 12px;background:var(--bg);border:1px solid var(--line);border-radius:9px;overflow:auto;font:12px/1.6 var(--mono)}
+ul.plain{margin:6px 0 0;padding-left:18px}
+ul.plain li{margin:3px 0}
+.timeline{list-style:none;margin:0;padding:0}
+.timeline li{display:grid;grid-template-columns:120px 1fr;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
+.timeline li:first-child{border-top:0}
+.status{display:inline-flex;align-items:center;gap:7px;font-weight:700}
+.status:before{content:"";width:9px;height:9px;border-radius:50%;background:var(--dot)}
+.skeleton{background:linear-gradient(90deg,var(--panel) 0%,var(--panel2) 50%,var(--panel) 100%);background-size:200% 100%;animation:sk 1.4s infinite;border-radius:14px;height:110px}
+@keyframes sk{to{background-position:-200% 0}}
+.toast{position:fixed;right:18px;bottom:18px;max-width:420px;padding:12px 14px;border-radius:10px;background:var(--panel2);border:1px solid var(--line2);box-shadow:0 10px 40px rgba(0,0,0,.45);font-size:13px}
+.toast.err{border-color:rgba(255,107,107,.5)}
+@media (max-width:1050px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2{grid-template-columns:1fr}}
+@media (max-width:760px){.layout{grid-template-columns:1fr}aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);max-height:40vh}main{padding:20px 16px}}
+@media (max-width:560px){.kpis{grid-template-columns:1fr}.who,.top .install{display:none}.top{padding:10px 14px}.head .actions{margin-left:0}.findings th:nth-child(3),.findings td:nth-child(3){display:none}.mobile-only{display:block}.timeline li{grid-template-columns:80px 1fr}}
+@media (prefers-reduced-motion:reduce){.skeleton{animation:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/"><img src="/forge-mark.svg" alt=""> FORGE <small>Dashboard</small></a>
+  <div class="spacer"></div>
+  <span class="who" id="who"></span>
+  <a class="btn install" href="/api/github/install">Install App</a>
+  <button class="btn" id="logout" hidden>Sign out</button>
+</header>
+<div id="root"></div>
+<script>
+"use strict";
+const root = document.getElementById("root");
+const COLORS = ["#e8b3a2","#a9c5d2","#c7d5b2","#d8b4e2","#f0c77a","#8fb8a8","#c9a27e"];
+const SEV_RANK = { critical: 0, high: 1, medium: 2, low: 3 };
+
+function h(tag, attrs, ...children) {
+  const el = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs || {})) {
+    if (value === undefined || value === null || value === false) continue;
+    if (key === "class") el.className = value;
+    else if (key === "style") el.setAttribute("style", value);
+    else if (key.startsWith("on")) el.addEventListener(key.slice(2), value);
+    else el.setAttribute(key, value === true ? "" : String(value));
+  }
+  for (const child of children.flat()) {
+    if (child === undefined || child === null || child === false) continue;
+    el.append(child instanceof Node ? child : document.createTextNode(String(child)));
+  }
+  return el;
+}
+const safeUrl = url => (typeof url === "string" && /^https:\/\/github\.com\//.test(url) ? url : undefined);
+function toast(message, error) {
+  const el = h("div", { class: "toast" + (error ? " err" : ""), role: "status" }, message);
+  document.body.append(el);
+  setTimeout(() => el.remove(), 6000);
+}
+function ago(iso) {
+  const seconds = (Date.now() - Date.parse(iso)) / 1000;
+  if (!Number.isFinite(seconds)) return "";
+  if (seconds < 60) return "just now";
+  if (seconds < 3600) return Math.round(seconds / 60) + " min ago";
+  if (seconds < 86400) return Math.round(seconds / 3600) + " h ago";
+  return Math.round(seconds / 86400) + " d ago";
+}
+async function api(path, options) {
+  const response = await fetch(path, { credentials: "same-origin", ...options });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) { const error = new Error(body.error || ("Request failed (" + response.status + ")")); error.status = response.status; throw error; }
+  return body;
+}
+
+let session;
+let current;
+
+function signedOut() {
+  root.replaceChildren(h("div", { class: "empty" },
+    h("h1", {}, "Your repositories, verified."),
+    h("p", {}, "Sign in with GitHub to see FORGE Shield scores, change risk on open pull requests, setup status and activity for every repository where the FORGE app is installed."),
+    h("div", { class: "actions" },
+      h("a", { class: "btn primary", href: "/api/github/login" }, "Sign in with GitHub"),
+      h("a", { class: "btn", href: "/api/github/install" }, "Install the GitHub App")),
+    h("p", { class: "muted", style: "margin-top:26px;font-size:12px" }, "FORGE reads repository metadata, manifests, commit subjects and agent configuration files. Source code is not stored.")));
+}
+
+function shell(repos) {
+  const list = h("div", {});
+  const search = h("input", { class: "search", type: "search", placeholder: "Filter repositories", "aria-label": "Filter repositories" });
+  const render = () => {
+    const query = search.value.trim().toLowerCase();
+    list.replaceChildren(...repos.filter(r => r.fullName.toLowerCase().includes(query)).map(repo =>
+      h("button", { class: "repo" + (current === repo.fullName ? " active" : ""), onclick: () => { location.hash = "#/" + repo.fullName; } },
+        h("span", { class: "name", title: repo.fullName }, repo.fullName), repo.private ? h("span", { class: "lock" }, "private") : null)));
+    if (!list.children.length) list.append(h("p", { class: "muted", style: "padding:4px 8px;font-size:12px" }, repos.length ? "No matches." : "No repositories yet."));
+  };
+  search.addEventListener("input", render);
+  render();
+  const main = h("main", { id: "main" });
+  root.replaceChildren(h("div", { class: "layout" }, h("aside", {}, h("h2", {}, "Repositories · " + repos.length), search, list), main));
+  return { main, render };
+}
+
+function kpiShield(shield) {
+  const color = shield.score >= 90 ? "var(--ok)" : shield.score >= 70 ? "var(--warn)" : shield.score >= 50 ? "var(--high)" : "var(--crit)";
+  return h("div", { class: "card" }, h("h3", {}, "Shield"),
+    h("div", { class: "kpi" },
+      h("div", { class: "ring", style: "--v:" + shield.score + ";--c:" + color }, h("b", {}, shield.grade)),
+      h("div", {}, h("div", { class: "big" }, shield.score, h("span", { class: "muted", style: "font-size:14px" }, "/100")),
+        h("div", { class: "sub" }, shield.summary.critical + " critical · " + shield.summary.high + " high · " + shield.summary.medium + " medium"))));
+}
+function kpiSetup(setup) {
+  const [label, dot, sub] = !setup.installed ? ["Not installed", "var(--faint)", "Open a setup PR to add FORGE"]
+    : setup.healthy ? ["Healthy", "var(--ok)", "Profile " + setup.state.profile + " · " + setup.state.targets.join(", ")]
+    : ["Needs attention", "var(--warn)", setup.missing.length + " missing · " + setup.outdated.length + " changed · " + setup.added.length + " new"];
+  return h("div", { class: "card" }, h("h3", {}, "FORGE setup"), h("div", { class: "kpi" }, h("div", {}, h("div", { class: "status", style: "--dot:" + dot + ";font-size:18px" }, label), h("div", { class: "sub" }, sub))));
+}
+function kpiPulls(pulls) {
+  const worst = pulls.slice().sort((a, b) => b.risk.score - a.risk.score)[0];
+  return h("div", { class: "card" }, h("h3", {}, "Open pull requests"), h("div", { class: "kpi" }, h("div", {},
+    h("div", { class: "big" }, pulls.length),
+    h("div", { class: "sub" }, worst ? h("span", {}, "Highest risk: ", h("span", { class: "chip lvl-" + worst.risk.level }, worst.risk.level + " " + worst.risk.score), " #" + worst.number) : "No open pull requests"))));
+}
+function kpiStack(profile) {
+  return h("div", { class: "card" }, h("h3", {}, "Stack"), h("div", { class: "kpi" }, h("div", {},
+    h("div", { style: "font-weight:750;font-size:16px" }, (profile.languages[0] || { language: "Unknown" }).language + (profile.frameworks.length ? " · " + profile.frameworks.slice(0, 2).join(", ") : "")),
+    h("div", { class: "sub" }, (profile.packageManager || "no package manager") + " · tests: " + (profile.testFramework || "not detected")))));
+}
+
+function findingsCard(shield) {
+  const rows = shield.findings.slice().sort((a, b) => SEV_RANK[a.severity] - SEV_RANK[b.severity]);
+  return h("div", { class: "card" }, h("h3", {}, "Shield findings · " + shield.filesScanned + " config files scanned"),
+    rows.length ? h("table", { class: "findings" }, h("thead", {}, h("tr", {}, h("th", {}, "Severity"), h("th", {}, "Finding"), h("th", {}, "Location"))),
+      h("tbody", {}, rows.map(item => h("tr", {},
+        h("td", {}, h("span", { class: "chip sev-" + item.severity }, item.severity)),
+        h("td", {}, h("div", {}, item.title, " ", h("code", { class: "muted" }, item.ruleId)), h("div", { class: "rec" }, item.recommendation), h("code", { class: "loc mobile-only" }, item.file + ":" + item.line)),
+        h("td", {}, h("code", { class: "loc" }, item.file + ":" + item.line))))))
+    : h("p", { class: "muted" }, shield.filesScanned ? "No findings. Agent configuration looks clean." : "No agent configuration files found yet."));
+}
+
+function pullsCard(pulls) {
+  return h("div", { class: "card" }, h("h3", {}, "Change risk"),
+    pulls.length ? pulls.map(pull => {
+      const color = { low: "var(--ok)", medium: "var(--warn)", high: "var(--high)", critical: "var(--crit)" }[pull.risk.level];
+      return h("div", { class: "pr" },
+        h("div", { class: "pr-title" }, h("span", { class: "chip lvl-" + pull.risk.level }, pull.risk.level), h("a", { href: safeUrl(pull.url), target: "_blank", rel: "noopener noreferrer" }, "#" + pull.number + " " + pull.title)),
+        h("div", { class: "bar" }, h("i", { style: "width:" + Math.max(3, pull.risk.score) + "%;background:" + color })),
+        h("div", { class: "muted", style: "font-size:12px" }, pull.risk.score + "/100 · " + pull.risk.stats.files + " files · +" + pull.risk.stats.additions + " / −" + pull.risk.stats.deletions + (pull.author ? " · @" + pull.author : "")),
+        pull.risk.reasons.length ? h("ul", { class: "reasons" }, pull.risk.reasons.slice(0, 3).map(reason => h("li", {}, "+" + reason.points + " " + reason.reason))) : null);
+    }) : h("p", { class: "muted" }, "No open pull requests."));
+}
+
+function profileCard(profile) {
+  const total = profile.languages.reduce((sum, l) => sum + l.files, 0) || 1;
+  const langs = profile.languages.slice(0, 6);
+  return h("div", { class: "card" }, h("h3", {}, "Project profile"),
+    langs.length ? h("div", {}, h("div", { class: "langs" }, langs.map((l, i) => h("i", { style: "width:" + (l.files / total * 100) + "%;background:" + COLORS[i % COLORS.length], title: l.language }))),
+      h("div", { class: "legend" }, langs.map((l, i) => h("span", { style: "--dot:" + COLORS[i % COLORS.length] }, l.language + " " + Math.round(l.files / total * 100) + "%")))) : null,
+    h("div", { style: "margin-top:14px" }, h("b", {}, "Verify commands"),
+      profile.verifyCommands.length ? h("pre", {}, profile.verifyCommands.join("\n")) : h("p", { class: "muted" }, "None detected.")),
+    profile.conventions.length ? h("div", { style: "margin-top:12px" }, h("b", {}, "Conventions"), h("ul", { class: "plain muted" }, profile.conventions.map(c => h("li", {}, c.replace(/\*\*/g, "").replace(/`/g, ""))))) : null);
+}
+
+function setupCard(setup) {
+  const section = (title, items) => items.length ? h("div", { style: "margin-top:10px" }, h("b", {}, title + " (" + items.length + ")"), h("ul", { class: "plain" }, items.slice(0, 8).map(p => h("li", {}, h("code", {}, p))), items.length > 8 ? h("li", { class: "muted" }, "…" + (items.length - 8) + " more") : null)) : null;
+  return h("div", { class: "card" }, h("h3", {}, "Setup details"),
+    !setup.installed ? h("p", { class: "muted" }, "FORGE files are not on the default branch. “Open setup PR” analyzes this repository and proposes agents, skills, commands, rules and a project guide for Claude Code, Cursor and Codex.")
+    : h("div", {}, h("div", { class: "muted", style: "font-size:13px" }, "Installed by FORGE " + setup.state.forgeVersion + " · " + ago(setup.state.installedAt)),
+        section("Missing", setup.missing), section("Changed or updatable", setup.outdated), section("New in catalog", setup.added),
+        setup.healthy ? h("p", { class: "muted" }, "All FORGE files match the current catalog.") : null));
+}
+
+function historyCard(history) {
+  return h("div", { class: "card" }, h("h3", {}, "Activity"),
+    history.length ? h("ul", { class: "timeline" }, history.map(item => h("li", {},
+      h("span", { class: "muted" }, ago(item.at)),
+      h("span", {}, h("b", {}, item.event === "dashboard" ? "Dashboard" : item.event === "pull_request" ? "PR check" : "/forge " + item.action),
+        item.event !== "issue_comment" ? " · " + item.action : "",
+        item.detail ? h("span", { class: "muted" }, " — " + item.detail) : null,
+        safeUrl(item.url) ? h("span", {}, " · ", h("a", { href: safeUrl(item.url), target: "_blank", rel: "noopener noreferrer" }, "open")) : null))))
+    : h("p", { class: "muted" }, "No FORGE activity yet. Comment /forge help on an issue or open a pull request."));
+}
+
+async function runAction(name, action, button) {
+  button.disabled = true;
+  const label = button.textContent;
+  button.textContent = action === "repair" ? "Preparing repair PR…" : "Analyzing & opening PR…";
+  try {
+    const result = await api("/api/app?op=action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, action }) });
+    if (result.upToDate) toast("FORGE is already up to date on this repository.");
+    else { toast("Pull request ready: " + result.created + " new, " + result.updated + " updated files."); if (safeUrl(result.url)) window.open(result.url, "_blank", "noopener"); }
+    loadRepo(name, true);
+  } catch (error) {
+    toast(error.message, true);
+  } finally {
+    button.disabled = false;
+    button.textContent = label;
+  }
+}
+
+async function loadRepo(name, quiet) {
+  current = name;
+  ui.render();
+  const main = ui.main;
+  if (!quiet) main.replaceChildren(h("div", { class: "head" }, h("div", {}, h("h1", {}, name), h("div", { class: "meta" }, "Scanning repository, agent configuration and open pull requests…"))),
+    h("div", { class: "kpis" }, [0, 1, 2, 3].map(() => h("div", { class: "skeleton" }))), h("div", { class: "skeleton", style: "height:260px" }));
+  try {
+    const data = await api("/api/app?op=repo&name=" + encodeURIComponent(name));
+    if (current !== name) return;
+    const setupLabel = !data.setup.installed ? "Open setup PR" : "Open repair PR";
+    const setupButton = h("button", { class: "btn primary", onclick: () => runAction(name, data.setup.installed ? "repair" : "analyze", setupButton) }, setupLabel);
+    main.replaceChildren(
+      h("div", { class: "head" },
+        h("div", {}, h("h1", {}, data.repository.fullName), h("div", { class: "meta" }, "Default branch ", h("code", {}, data.repository.defaultBranch), data.repository.private ? " · private" : " · public", " · scanned " + ago(data.generatedAt))),
+        h("div", { class: "actions" }, h("a", { class: "btn", href: "https://github.com/" + data.repository.fullName, target: "_blank", rel: "noopener noreferrer" }, "GitHub ↗"), h("button", { class: "btn", onclick: () => loadRepo(name) }, "Rescan"), setupButton)),
+      h("div", { class: "kpis" }, kpiShield(data.shield), kpiSetup(data.setup), kpiPulls(data.pulls), kpiStack(data.profile)),
+      h("div", { class: "grid2" }, findingsCard(data.shield), pullsCard(data.pulls)),
+      h("div", { class: "grid2" }, profileCard(data.profile), h("div", { style: "display:grid;gap:14px;align-content:start" }, setupCard(data.setup), historyCard(data.history))));
+  } catch (error) {
+    if (current !== name) return;
+    main.replaceChildren(h("div", { class: "card" }, h("h3", {}, "Could not load " + name), h("p", {}, error.message),
+      error.status === 403 || /permission/i.test(error.message) ? h("p", { class: "muted" }, "Ask a repository admin to accept the FORGE app's updated permissions (Contents, Pull requests, Issues and Checks).") : null,
+      h("button", { class: "btn", onclick: () => loadRepo(name) }, "Try again")));
+  }
+}
+
+let ui;
+function route() {
+  const name = decodeURIComponent(location.hash.replace(/^#\//, ""));
+  const repos = session.repositories;
+  if (name && repos.some(r => r.fullName === name)) return loadRepo(name);
+  if (repos.length) { location.replace("#/" + repos[0].fullName); return; }
+  ui.main.replaceChildren(h("div", { class: "empty" }, h("h1", {}, "No repositories yet"),
+    h("p", {}, session.reauthRequired ? "Sign in again so FORGE can load the repositories you can access." : "Install the FORGE GitHub App on a repository, then sign in again to refresh this list."),
+    h("div", { class: "actions" }, h("a", { class: "btn primary", href: "/api/github/install" }, "Install the GitHub App"), h("a", { class: "btn", href: "/api/github/login" }, "Sign in again"))));
+}
+
+async function start() {
+  try {
+    session = await api("/api/app?op=session");
+  } catch (error) {
+    if (error.status === 401) return signedOut();
+    root.replaceChildren(h("div", { class: "empty" }, h("h1", {}, "Dashboard unavailable"), h("p", {}, error.message)));
+    return;
+  }
+  document.getElementById("who").textContent = "@" + session.user.login;
+  const logout = document.getElementById("logout");
+  logout.hidden = false;
+  logout.addEventListener("click", async () => { await fetch("/api/github/logout", { method: "POST", credentials: "same-origin" }).catch(() => undefined); location.href = "/app/"; });
+  ui = shell(session.repositories);
+  if (session.reauthRequired) ui.main.before(h("div", { class: "banner", style: "margin:16px 30px 0" }, "Your session was created before the dashboard existed. ", h("a", { href: "/api/github/login" }, "Sign in again"), " to load your repositories."));
+  if (new URLSearchParams(location.search).get("github") === "connected") history.replaceState(null, "", "/app/" + location.hash);
+  window.addEventListener("hashchange", route);
+  route();
+}
+start();
+</script>
+</body>
+</html>

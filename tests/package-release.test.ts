@@ -13,7 +13,7 @@ describe("npm package release metadata", () => {
       repository?: { url?: string };
     };
 
-    expect(packageJson.version).toBe("1.0.0");
+    expect(packageJson.version).toBe("2.0.0");
     expect(packageJson.bin?.forge).toBe("./dist/cli.js");
     expect(packageJson.files).toEqual(expect.arrayContaining(["dist", "README.md", "CHANGELOG.md", "LICENSE", "SECURITY.md"]));
     expect(packageJson.engines?.node).toBe(">=22");
@@ -22,6 +22,10 @@ describe("npm package release metadata", () => {
     expect(packageJson.scripts?.prepublishOnly).toContain("npm test");
     expect(packageJson.repository?.url).toContain("FORGE-ECC");
     const changelog = await readFile(path.join(process.cwd(), "CHANGELOG.md"), "utf8");
+    expect(changelog).toContain("## 2.0.0 — The verified agent harness");
     expect(changelog).toContain("## 1.0.0 — First major release");
+    const cli = await readFile(path.join(process.cwd(), "src", "cli.ts"), "utf8");
+    expect(cli).toContain(`const VERSION = "${packageJson.version}";`);
+    expect(packageJson.files).toContain("catalog");
   });
 });

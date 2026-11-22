@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "../_lib/vercel-types.js";
+import { describePrivateKey } from "../../src/github/github-client.js";
 
-export default function handler(_req: VercelRequest, res: VercelResponse) {
+export default function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("X-Content-Type-Options", "nosniff");
   const configured = Boolean(
@@ -18,5 +19,7 @@ export default function handler(_req: VercelRequest, res: VercelResponse) {
     message: configured
       ? "GitHub App backend environment variables are present."
       : "One or more GitHub App backend environment variables are missing.",
+    // Shape-only diagnostics (never key material) to debug GITHUB_APP_PRIVATE_KEY formatting.
+    ...(req.query?.check === "key" ? { privateKey: describePrivateKey(process.env.GITHUB_APP_PRIVATE_KEY) } : {}),
   });
 }

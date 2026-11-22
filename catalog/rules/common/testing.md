@@ -1,0 +1,11 @@
+---
+description: Testing expectations for every behavior change
+profile: minimal
+---
+
+# Testing
+
+- Every behavior change comes with a test that would fail without it.
+- Unit tests are fast and deterministic; integration tests cover real boundaries.
+- Test through public interfaces; avoid asserting on private details.
+- Fix flaky tests or quarantine them with an owner — never ignore them.

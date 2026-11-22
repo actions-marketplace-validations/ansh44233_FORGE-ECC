@@ -1,0 +1,13 @@
+---
+description: Small focused commits, conventional messages and clean pull requests
+profile: standard
+tags: git
+---
+
+# Git Workflow
+
+- Work on a branch; keep commits small and focused on one change.
+- Conventional commit messages: `type(scope): summary` (feat, fix, refactor, docs, test, chore, ci).
+- Never commit secrets, generated artifacts or unrelated formatting churn.
+- Before a PR: rebase or merge the base branch, run checks, review your own diff.
+- PR description: what, why, how verified (commands + results), risks.

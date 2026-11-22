@@ -23,3 +23,4 @@ coverage/
 
 # Automated benchmark matrix reports
 .forge/benchmark-matrices/
+.forge/session/

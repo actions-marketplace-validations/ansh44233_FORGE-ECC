@@ -1,0 +1,12 @@
+---
+description: Review a pull request with risk score, findings and verdict
+argument-hint: <PR number or URL>
+profile: standard
+---
+
+# /review-pr
+Review pull request `$ARGUMENTS`:
+1. Fetch the diff (`gh pr diff`) and description (`gh pr view`).
+2. Summarize intent and the riskiest files (auth, CI, migrations, agent config, dependencies).
+3. Apply the FORGE **code-review-checklist** skill; findings ordered by severity with file:line.
+4. Verdict: approve / approve with fixes / request changes.

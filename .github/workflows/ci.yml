@@ -2,9 +2,13 @@ name: FORGE CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, forge-v2]
   pull_request:
-    branches: [main]
+    branches: [main, forge-v2]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -38,6 +42,10 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
+      - name: FORGE Shield self-scan
+        run: |
+          node dist/cli.js shield . --markdown >> "$GITHUB_STEP_SUMMARY"
+          node dist/cli.js shield . --fail-on high
       - name: Pack and install CLI in a clean directory
         run: |
           npm pack --pack-destination "$RUNNER_TEMP"
