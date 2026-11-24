@@ -11,7 +11,7 @@ import path from "node:path";
 import { GitHubClient } from "../../src/github/github-client.js";
 import { handleGitHubEvent } from "../../src/github/app-handlers.js";
 
-const FORGE_VERSION = "3.0.0";
+const FORGE_VERSION = "4.0.0";
 const APP_EVENTS = new Set(["issue_comment", "pull_request"]);
 
 export const config = { api: { bodyParser: false } };

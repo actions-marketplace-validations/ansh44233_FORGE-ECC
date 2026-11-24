@@ -96,6 +96,8 @@ const INSTRUCTION_FILES = [...new Set(["AGENTS.md", "CLAUDE.md", "CLAUDE.local.m
 const SETTINGS_FILES = [".claude/settings.json", ".claude/settings.local.json"];
 const MCP_FILES = [".mcp.json", "mcp.json", ".cursor/mcp.json", ".vscode/mcp.json", ".gemini/settings.json", "opencode.json", ...EXTENDED_MCP_FILES];
 const OTHER_SETTINGS_FILES = EXTENDED_SETTINGS_FILES;
+/** Native hook configs of other harnesses; their commands get the same hook checks as Claude Code's. */
+const NATIVE_HOOK_FILES = [".cursor/hooks.json", ".codex/hooks.json", ".gemini/settings.json"];
 const SCANNED_DIRECTORIES = [".claude/agents", ".claude/commands", ".claude/skills", ".claude/hooks", ".claude/rules", ".cursor/rules", ".cursor/commands", ".opencode", ".gemini/commands", ".agents/skills", ".forge/skills", ".forge/hooks", ".forge/harness", ".github/workflows", ...EXTENDED_DIRECTORIES];
 const SCANNED_EXTENSIONS = new Set([".md", ".mdc", ".json", ".yaml", ".yml", ".toml", ".sh", ".js", ".mjs", ".cjs", ".ts", ".py"]);
 
@@ -160,7 +162,7 @@ async function walk(root: string, directory: string, depth: number, files: Set<s
 export async function discoverShieldFiles(projectPath: string): Promise<{ root: string; files: string[] }> {
   const root = await realpath(path.resolve(projectPath));
   const files = new Set<string>();
-  for (const relative of [...INSTRUCTION_FILES, ...SETTINGS_FILES, ...MCP_FILES, ...OTHER_SETTINGS_FILES, ".forge/permissions.json", ".forge/policy.json"]) await addFile(root, relative, files);
+  for (const relative of [...INSTRUCTION_FILES, ...SETTINGS_FILES, ...MCP_FILES, ...OTHER_SETTINGS_FILES, ...NATIVE_HOOK_FILES, ".forge/permissions.json", ".forge/policy.json"]) await addFile(root, relative, files);
   const visited = { count: 0 };
   for (const relative of SCANNED_DIRECTORIES) await walk(root, path.join(root, relative), 0, files, visited);
   return { root, files: [...files].sort() };
@@ -305,6 +307,26 @@ function scanClaudeSettings(file: string, content: string, json: unknown): Shiel
   return findings;
 }
 
+/** Hook commands in Cursor (flat list), Codex and Gemini (matcher groups) configs. */
+function scanNativeHookConfig(file: string, content: string, json: unknown): ShieldFinding[] {
+  const findings: ShieldFinding[] = [];
+  const hooks = asRecord(asRecord(json)?.hooks);
+  for (const list of Object.values(hooks ?? {})) {
+    if (!Array.isArray(list)) continue;
+    for (const item of list) {
+      const record = asRecord(item);
+      if (!record) continue;
+      const matcher = typeof record.matcher === "string" ? record.matcher : undefined;
+      const commands = Array.isArray(record.hooks) ? record.hooks.map(hook => asRecord(hook)?.command) : [record.command];
+      for (const command of commands) {
+        if (typeof command !== "string") continue;
+        findings.push(...scanHookCommand(file, content, command, matcher), ...scanHookCommandExtended(file, content, command, finding as MakeFinding) as ShieldFinding[]);
+      }
+    }
+  }
+  return findings;
+}
+
 function scanMcpConfig(file: string, content: string, json: unknown): ShieldFinding[] {
   const findings: ShieldFinding[] = [];
   const servers = mcpServers(json);
@@ -403,6 +425,7 @@ export async function runShield(projectPath: string, options: { now?: () => Date
       try { json = JSON.parse(content); } catch { json = undefined; }
       if (json !== undefined) {
         if (SETTINGS_FILES.includes(file)) findings.push(...scanClaudeSettings(file, content, json));
+        if (NATIVE_HOOK_FILES.includes(file)) findings.push(...scanNativeHookConfig(file, content, json));
         if (MCP_FILES.includes(file)) {
           findings.push(...scanMcpConfig(file, content, json), ...scanMcpExtended(file, content, json, finding as MakeFinding) as ShieldFinding[]);
           mcpConfigs.push({ file, content, json });

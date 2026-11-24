@@ -38,6 +38,8 @@ export interface HookInput {
   transcript_path?: string;
   trigger?: string;
   reason?: string;
+  /** Set by FORGE's native adapters; absent for Claude Code. */
+  forge_harness?: string;
 }
 
 export interface HookOutput {
@@ -252,7 +254,7 @@ async function preTool(root: string, input: HookInput, config: HarnessHookConfig
   const verdict = evaluateToolUse(root, toolName, input.tool_input ?? {}, config);
   if (verdict.decision === "allow") return { exitCode: 0 };
   const command = typeof input.tool_input?.command === "string" ? input.tool_input.command : typeof input.tool_input?.file_path === "string" ? input.tool_input.file_path : "";
-  await logGuard(root, { at: now.toISOString(), session: input.session_id, tool: toolName, decision: verdict.decision, rule: verdict.ruleId, target: command.slice(0, 200).replace(REDACT, (_m, prefix?: string) => (prefix ?? "") + "[REDACTED]") });
+  await logGuard(root, { at: now.toISOString(), harness: input.forge_harness ?? "claude", session: input.session_id, tool: toolName, decision: verdict.decision, rule: verdict.ruleId, target: command.slice(0, 200).replace(REDACT, (_m, prefix?: string) => (prefix ?? "") + "[REDACTED]") });
   return {
     exitCode: 0,
     json: {
@@ -335,10 +337,11 @@ async function sessionStart(root: string, _input: HookInput, config: HarnessHook
 /** Credentials worth stopping before they land in the transcript (and the model provider's logs). */
 const LIVE_SECRET = /\bsk-ant-[A-Za-z0-9_-]{20,}|\bsk-(?:proj-)?[A-Za-z0-9]{32,}|\bgh[pousr]_[A-Za-z0-9]{36,}|\bgithub_pat_[A-Za-z0-9_]{40,}|\bxox[baprs]-[A-Za-z0-9-]{20,}|\bAKIA[0-9A-Z]{16}\b|-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----|\bAIza[0-9A-Za-z_-]{35}\b|\bsk_live_[0-9A-Za-z]{24,}/;
 
-async function promptSubmit(_root: string, input: HookInput, config: HarnessHookConfig): Promise<HookOutput> {
+async function promptSubmit(root: string, input: HookInput, config: HarnessHookConfig, now: Date): Promise<HookOutput> {
   if (!config.promptGuard.enabled || typeof input.prompt !== "string") return { exitCode: 0 };
   const match = LIVE_SECRET.exec(input.prompt.slice(0, 200_000));
   if (!match) return { exitCode: 0 };
+  await logGuard(root, { at: now.toISOString(), harness: input.forge_harness ?? "claude", session: input.session_id, tool: "prompt", decision: "deny", rule: "GUARD-PROMPT-SECRET", target: "[credential in prompt]" });
   return { exitCode: 0, json: { decision: "block", reason: `FORGE blocked this prompt: it contains what looks like a live credential (${match[0].slice(0, 8)}…). Remove it and reference it through an environment variable instead, then rotate the key if it was shared anywhere.` } };
 }
 
@@ -386,7 +389,7 @@ export async function runHarnessHook(event: HookEventName, rawInput: string, opt
       case "post-edit": return await postEdit(root, input, config, now);
       case "stop": return await stop(root, input, config, now);
       case "session-start": return await sessionStart(root, input, config);
-      case "prompt-submit": return await promptSubmit(root, input, config);
+      case "prompt-submit": return await promptSubmit(root, input, config, now);
       case "pre-compact": return await preCompact(root, input, config, now);
       case "session-end": return await sessionEnd(root, input, config, now);
     }

@@ -127,6 +127,9 @@ describe("FORGE MCP stdio protocol integration", () => {
     expect(toolNames).toContain("forge_memory_search");
     expect(toolNames).toContain("forge_memory_add");
     expect(toolNames).toContain("forge_shield_scan");
+    expect(toolNames).toContain("forge_guard_check");
+    expect(toolNames).toContain("forge_consult");
+    expect(toolNames).toContain("forge_context_budget");
     const saved = await request("tools/call", {
       name: "forge_memory_add",
       arguments: { kind: "decision", content: "Answers are exported from src/index.ts", evidence: ["src/index.ts"] }
@@ -147,6 +150,12 @@ describe("FORGE MCP stdio protocol integration", () => {
     const shield = await request("tools/call", { name: "forge_shield_scan", arguments: {} });
     expect(shield.result?.isError).not.toBe(true);
     expect(shield.result.content[0].text).toContain('"tool": "forge-shield"');
+    const guard = await request("tools/call", { name: "forge_guard_check", arguments: { command: "rm -rf /" } });
+    expect(guard.result.content[0].text).toContain('"decision": "deny"');
+    const advice = await request("tools/call", { name: "forge_consult", arguments: { task: "security review" } });
+    expect(advice.result.content[0].text).toContain("security-reviewer");
+    const budget = await request("tools/call", { name: "forge_context_budget", arguments: {} });
+    expect(budget.result.content[0].text).toContain('"grade"');
 
     child!.stdin.end();
     lines.close();

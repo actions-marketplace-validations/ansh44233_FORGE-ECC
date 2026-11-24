@@ -55,7 +55,7 @@ export function gitBlobSha(content: string): string {
 // Remote Shield: fetch only agent-configuration files into a temporary folder
 // ---------------------------------------------------------------------------
 
-const SHIELD_PATH = /^(?:AGENTS\.md|CLAUDE\.md|CLAUDE\.local\.md|GEMINI\.md|\.cursorrules|\.windsurfrules|\.clinerules|\.rules|\.mcp\.json|mcp\.json|opencode\.json|\.github\/copilot-instructions\.md|\.claude\/settings(?:\.local)?\.json|\.cursor\/mcp\.json|\.vscode\/(?:mcp|settings)\.json|\.gemini\/settings\.json|\.codex\/config\.toml|\.zed\/settings\.json|\.kiro\/settings\/mcp\.json|\.roo\/mcp\.json|\.windsurf\/mcp\.json|\.forge\/(?:permissions|policy)\.json)$|^(?:\.claude\/(?:agents|commands|skills|hooks|rules)|\.cursor\/(?:rules|commands)|\.opencode|\.gemini\/commands|\.agents\/skills|\.forge\/(?:skills|hooks|harness)|\.github\/(?:workflows|instructions|prompts|agents)|\.windsurf\/(?:rules|workflows)|\.kiro\/steering|\.clinerules|\.roo\/rules)\/.+\.(?:md|mdc|json|ya?ml|toml|sh|js|mjs|cjs|ts|py)$/;
+const SHIELD_PATH = /^(?:AGENTS\.md|CLAUDE\.md|CLAUDE\.local\.md|GEMINI\.md|\.cursorrules|\.windsurfrules|\.clinerules|\.rules|\.mcp\.json|mcp\.json|opencode\.json|\.github\/copilot-instructions\.md|\.claude\/settings(?:\.local)?\.json|\.cursor\/mcp\.json|\.cursor\/hooks\.json|\.codex\/hooks\.json|\.vscode\/(?:mcp|settings)\.json|\.gemini\/settings\.json|\.codex\/config\.toml|\.zed\/settings\.json|\.kiro\/settings\/mcp\.json|\.roo\/mcp\.json|\.windsurf\/mcp\.json|\.forge\/(?:permissions|policy)\.json)$|^(?:\.claude\/(?:agents|commands|skills|hooks|rules)|\.cursor\/(?:rules|commands)|\.opencode|\.gemini\/commands|\.agents\/skills|\.forge\/(?:skills|hooks|harness)|\.github\/(?:workflows|instructions|prompts|agents)|\.windsurf\/(?:rules|workflows)|\.kiro\/steering|\.clinerules|\.roo\/rules)\/.+\.(?:md|mdc|json|ya?ml|toml|sh|js|mjs|cjs|ts|py)$/;
 const MAX_REMOTE_FILES = 200;
 
 /** Highest-risk surfaces first; FORGE-generated catalog copies last. */
@@ -240,7 +240,7 @@ export async function runRemoteSetup(context: AppContext, owner: string, repo: s
 export interface RemoteDoctor {
   installed: boolean;
   healthy: boolean;
-  state?: Pick<InstallState, "forgeVersion" | "profile" | "targets" | "installedAt"> & { languages?: string[]; hooks?: boolean };
+  state?: Pick<InstallState, "forgeVersion" | "profile" | "targets" | "installedAt"> & { languages?: string[]; hooks?: boolean; hookTargets?: string[] };
   missing: string[];
   outdated: string[];
   added: string[];
@@ -259,7 +259,7 @@ export async function computeRemoteDoctor(context: AppContext, owner: string, re
   const missing = state.files.filter(file => !blobs.has(file.path)).map(file => file.path);
   const outdated = plan.files.filter(file => blobs.has(file.path) && blobs.get(file.path) !== gitBlobSha(file.content)).map(file => file.path);
   const added = plan.files.filter(file => !blobs.has(file.path) && !state.files.some(entry => entry.path === file.path)).map(file => file.path);
-  return { installed: true, healthy: !missing.length && !outdated.length && !added.length, state: { forgeVersion: state.forgeVersion, profile: state.profile, targets: state.targets, installedAt: state.installedAt, ...(Array.isArray(state.languages) ? { languages: state.languages } : {}), hooks: Boolean(state.settings) }, missing, outdated, added };
+  return { installed: true, healthy: !missing.length && !outdated.length && !added.length, state: { forgeVersion: state.forgeVersion, profile: state.profile, targets: state.targets, installedAt: state.installedAt, ...(Array.isArray(state.languages) ? { languages: state.languages } : {}), hooks: Boolean(state.settings) || Boolean(state.nativeHooks?.length), hookTargets: [...(state.settings ? ["claude"] : []), ...(Array.isArray(state.nativeHooks) ? state.nativeHooks.map(entry => String(entry.target)) : [])] }, missing, outdated, added };
 }
 
 export function formatRemoteDoctor(doctor: RemoteDoctor, forgeVersion: string): string {

@@ -24,8 +24,8 @@ describe("harness capability manifest", () => {
   });
 
   it("does not overstate the current hook integration", () => {
-    expect(getHarnessCapability("claude").capabilities.hooks).toBe("native");
-    for (const target of ["cursor", "codex", "opencode", "gemini", "copilot", "windsurf", "kiro", "cline", "zed"] as const) {
+    for (const target of ["claude", "cursor", "codex", "gemini"] as const) expect(getHarnessCapability(target).capabilities.hooks).toBe("native");
+    for (const target of ["opencode", "copilot", "windsurf", "kiro", "cline", "zed"] as const) {
       expect(getHarnessCapability(target).capabilities.hooks).toBe("unsupported");
     }
   });

@@ -156,6 +156,8 @@ details.catd summary::-webkit-details-marker{display:none}
 .hcard.on{border-color:rgba(159,213,164,.35)}
 .hcard .t{display:flex;align-items:center;gap:8px;font-weight:700;margin-bottom:10px}
 .hcard .t span{margin-left:auto}
+.hcard .t span.guard{margin-left:auto;color:#ffcf8a;border-color:rgba(255,207,138,.35);background:rgba(255,207,138,.08)}
+.hcard .t span.guard + span{margin-left:0}
 .caps{display:grid;grid-template-columns:auto auto;gap:4px 12px;font-size:12px}
 .loopc{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--panel);margin-bottom:12px}
 .loopc .g{font-weight:650;margin:6px 0}
@@ -170,10 +172,39 @@ details.catd summary::-webkit-details-marker{display:none}
 .toast{position:fixed;right:18px;bottom:18px;max-width:420px;padding:12px 14px;border-radius:10px;background:var(--panel2);border:1px solid var(--line2);box-shadow:0 10px 40px rgba(0,0,0,.45);font-size:13px;z-index:20}
 .toast.err{border-color:rgba(255,107,107,.5)}
 .mobile-only{display:none}
+.strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:14px}
+.mini{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(180deg,var(--panel2),var(--panel));text-decoration:none;transition:border-color .15s,transform .15s}
+.mini:hover{border-color:var(--line2);transform:translateY(-1px)}
+.mini .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:15px;flex:none;background:var(--panel3);color:var(--c,var(--accent))}
+.mini .t{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:700}
+.mini .v{font-weight:750;font-size:14px;margin-top:1px}
+.mini .d{color:var(--muted);font-size:12px}
+.rt code{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:0 5px;font-size:11.5px;color:var(--accent)}
+.fade{animation:fade .22s ease-out}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.card{transition:border-color .15s}
+.card:hover{border-color:var(--line2)}
+th.sort{cursor:pointer;user-select:none}
+th.sort:hover{color:var(--muted)}
+th.sort.on{color:var(--accent)}
+th.sort.on:after{content:" ↓"}
+th.sort.on.asc:after{content:" ↑"}
+.setupv{font-size:18px}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
+.pill b{color:var(--ink)}
+.attn li{display:flex;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
+.attn li:first-child{border-top:0}
+.attn li a{text-decoration:none;font-weight:650}
+.attn li a:hover{text-decoration:underline}
+.keys{margin:18px 4px 0;font-size:11px;color:var(--faint);display:flex;flex-wrap:wrap;gap:6px 12px}
+.keys span{white-space:nowrap}
+.keys kbd+kbd{margin-left:3px}
+kbd{font-family:var(--mono);font-size:10.5px;border:1px solid var(--line2);border-bottom-width:2px;border-radius:5px;padding:0 5px;color:var(--muted);background:var(--panel)}
+@media (max-width:1100px){.strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:1100px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2,.grid3{grid-template-columns:1fr}.features{grid-template-columns:1fr}}
 @media (max-width:760px){.top{margin:8px 8px 0}.welcome .empty h1{font-size:34px}.layout{grid-template-columns:1fr}aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);max-height:36vh}main{padding:20px 16px}.cat{grid-template-columns:1fr 44px}.cat .bar{grid-column:1/-1;order:3}.ev{margin-left:0}.topnav{display:none}}
-@media (max-width:560px){.kpis{grid-template-columns:1fr}.who,.top .install{display:none}.top{padding:0 14px}.head .actions{margin-left:0}.findings th:nth-child(3),.findings td:nth-child(3){display:none}.mobile-only{display:block}.timeline li{grid-template-columns:80px 1fr}.fleet th:nth-child(4),.fleet td:nth-child(4),.fleet th:nth-child(5),.fleet td:nth-child(5){display:none}}
-@media (prefers-reduced-motion:reduce){.skeleton{animation:none}}
+@media (max-width:560px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.kpis .card{padding:12px}.kpis .ring{width:44px;height:44px}.kpis .ring b{width:34px;height:34px;font-size:13px}.kpi{gap:10px;min-height:56px;flex-wrap:wrap}.kpi .big{font-size:22px}.setupv{font-size:15px}.strip{gap:10px}.mini{padding:10px}.mini .ic{display:none}.keys{display:none}.fleet th:nth-child(n+4),.fleet td:nth-child(n+4){display:none}.who,.top .install{display:none}.top{padding:0 14px}.head .actions{margin-left:0}.findings th:nth-child(3),.findings td:nth-child(3){display:none}.mobile-only{display:block}.timeline li{grid-template-columns:80px 1fr}.fleet th:nth-child(4),.fleet td:nth-child(4),.fleet th:nth-child(5),.fleet td:nth-child(5){display:none}}
+@media (prefers-reduced-motion:reduce){.skeleton,.fade{animation:none}.mini:hover{transform:none}}
 </style>
 </head>
 <body>
@@ -196,7 +227,7 @@ const COLORS = ["#e8b3a2","#a9c5d2","#c7d5b2","#d8b4e2","#f0c77a","#8fb8a8","#c9
 const SEV_RANK = { critical: 0, high: 1, medium: 2, low: 3 };
 const TABS = [
   ["overview", "Overview"], ["scorecard", "Scorecard"], ["shield", "Shield"], ["pulls", "Pull requests"],
-  ["memory", "Memory"], ["instincts", "Instincts"], ["loops", "Loops"], ["harnesses", "Harnesses"], ["activity", "Activity"],
+  ["memory", "Memory"], ["instincts", "Instincts"], ["loops", "Loops"], ["context", "Context"], ["harnesses", "Harnesses"], ["activity", "Activity"],
 ];
 
 function h(tag, attrs, ...children) {
@@ -244,6 +275,17 @@ function copyCmd(command) {
   return h("div", { class: "cmd" }, h("code", {}, command), button);
 }
 function mdText(s) { return String(s || "").replace(/\*\*/g, "").replace(/`/g, ""); }
+/** Inline `code` and **bold** as DOM nodes (no HTML parsing, so nothing from the API can inject markup). */
+function richText(s) {
+  const out = h("span", { class: "rt" });
+  String(s || "").split(/(`[^`]+`|\*\*[^*]+\*\*)/).forEach(part => {
+    if (!part) return;
+    if (part.startsWith("`") && part.endsWith("`")) out.append(h("code", {}, part.slice(1, -1)));
+    else if (part.startsWith("**") && part.endsWith("**")) out.append(h("b", {}, part.slice(2, -2)));
+    else out.append(document.createTextNode(part));
+  });
+  return out;
+}
 
 let session;
 let ui;
@@ -289,8 +331,10 @@ function shell(repos) {
   search.addEventListener("input", render);
   render();
   const main = h("main", { id: "main" });
-  root.replaceChildren(h("div", { class: "layout" }, h("aside", {}, h("h2", {}, "Repositories · " + repos.length), search, list), main));
-  return { main, render };
+  const key = (label, ...k) => h("span", {}, k.map(x => h("kbd", {}, x)), " " + label);
+  const keys = h("div", { class: "keys", "aria-label": "Keyboard shortcuts" }, key("filter", "/"), key("tabs", "[", "]"), key("rescan", "r"), key("fleet", "g"));
+  root.replaceChildren(h("div", { class: "layout" }, h("aside", {}, h("h2", {}, "Repositories · " + repos.length), search, list, keys), main));
+  return { main, render, search };
 }
 
 function setNav(which) {
@@ -307,6 +351,7 @@ function setNav(which) {
 let fleetScanning = false;
 function fleet() {
   current = { name: "", tab: "overview" };
+  document.title = "Fleet · FORGE Control Center";
   setNav("fleet");
   ui.render();
   const repos = session.repositories;
@@ -325,23 +370,73 @@ function fleet() {
     h("div", { class: "head" }, h("div", {}, h("h1", {}, "Fleet"), h("div", { class: "meta" }, repos.length + " repositories · " + scanned.length + " scanned this session")), h("div", { class: "actions" }, scanButton)),
     h("p", { class: "section-intro" }, "One view across every repository with the FORGE app. Scores come from FORGE's deterministic scorecard and Shield; open a repository for evidence and next actions."),
     h("div", { class: "kpis" },
-      kpiNumber("Avg. readiness", readiness === undefined ? "—" : readiness + "%", "across scanned repositories", readiness),
+      kpiNumber("Avg. readiness", readiness === undefined ? "—" : readiness + "%", "across scanned repositories", readiness, readiness === undefined ? undefined : tenColor(Math.round(readiness / 10))),
       kpiNumber("Avg. Shield", shieldAvg === undefined ? "—" : shieldAvg, "out of 100", shieldAvg),
       kpiNumber("Critical findings", scanned.length ? critical : "—", critical ? "fix these first" : "none in scanned repos"),
       kpiNumber("High-risk PRs", scanned.length ? risky : "—", "open, high or critical risk")),
-    h("div", { class: "card" }, h("h3", {}, "Repositories"),
-      repos.length ? h("table", { class: "fleet" },
-        h("thead", {}, h("tr", {}, h("th", {}, "Repository"), h("th", {}, "Readiness"), h("th", {}, "Shield"), h("th", {}, "Setup"), h("th", {}, "Open PRs"))),
-        h("tbody", {}, repos.map(repo => {
-          const o = cache.get(repo.fullName);
-          return h("tr", { class: "click", onclick: () => { location.hash = "#/" + repo.fullName + "/overview"; } },
-            h("td", {}, h("b", {}, repo.fullName), repo.private ? h("span", { class: "lock", style: "margin-left:6px" }, "private") : null),
-            h("td", {}, o && o.scorecard ? [h("span", { class: "bar" }, h("i", { style: "width:" + o.scorecard.percent + "%;background:" + tenColor(Math.round(o.scorecard.percent / 10)) })), o.scorecard.percent + "% · " + o.scorecard.grade] : h("span", { class: "faint" }, o ? "n/a" : "not scanned")),
-            h("td", {}, o ? h("span", {}, h("b", {}, o.shield.score), h("span", { class: "muted" }, " " + o.shield.grade + (o.shield.summary.critical ? " · " + o.shield.summary.critical + " critical" : ""))) : h("span", { class: "faint" }, "—")),
-            h("td", {}, o ? setupLabel(o.setup) : h("span", { class: "faint" }, "—")),
-            h("td", {}, o ? o.pulls.length : h("span", { class: "faint" }, "—")));
-        })))
-      : h("p", { class: "muted" }, "No repositories yet.")));
+    attentionCard(scanned),
+    h("div", { class: "card" }, h("h3", {}, "Repositories", h("span", { class: "pill", style: "margin-left:auto;text-transform:none;letter-spacing:0" }, "Click a column to sort")),
+      repos.length ? fleetTable(repos) : h("p", { class: "muted" }, "No repositories yet.")));
+}
+
+let fleetSort = { key: "name", asc: true };
+const FLEET_COLUMNS = [
+  ["name", "Repository", o => null],
+  ["readiness", "Readiness", o => o && o.scorecard ? o.scorecard.percent : -1],
+  ["shield", "Shield", o => o ? o.shield.score : -1],
+  ["guard", "Guard", o => o ? (o.harnesses || []).filter(x => x.guarded).length : -1],
+  ["context", "Context", o => o && o.context ? -o.context.worst : -Infinity],
+  ["setup", "Setup", o => !o ? -1 : !o.setup.installed ? 0 : o.setup.healthy ? 2 : 1],
+  ["prs", "Open PRs", o => o ? o.pulls.length : -1],
+];
+
+function fleetTable(repos) {
+  const column = FLEET_COLUMNS.find(c => c[0] === fleetSort.key) || FLEET_COLUMNS[0];
+  const rows = repos.slice().sort((a, b) => {
+    if (column[0] === "name") return a.fullName.localeCompare(b.fullName) * (fleetSort.asc ? 1 : -1);
+    const va = column[2](cache.get(a.fullName)), vb = column[2](cache.get(b.fullName));
+    return (va - vb) * (fleetSort.asc ? 1 : -1) || a.fullName.localeCompare(b.fullName);
+  });
+  const header = FLEET_COLUMNS.map(([key, label]) => h("th", { class: "sort" + (fleetSort.key === key ? " on" + (fleetSort.asc ? " asc" : "") : ""), tabindex: "0", role: "button", "aria-sort": fleetSort.key === key ? (fleetSort.asc ? "ascending" : "descending") : "none",
+    onclick: () => { fleetSort = { key, asc: fleetSort.key === key ? !fleetSort.asc : key === "name" }; fleet(); },
+    onkeydown: e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } } }, label));
+  return h("table", { class: "fleet" },
+    h("thead", {}, h("tr", {}, header)),
+    h("tbody", {}, rows.map(repo => {
+      const o = cache.get(repo.fullName);
+      const guarded = o ? (o.harnesses || []).filter(x => x.guarded) : [];
+      return h("tr", { class: "click", onclick: () => { location.hash = "#/" + repo.fullName + "/overview"; } },
+        h("td", {}, h("b", {}, repo.fullName), repo.private ? h("span", { class: "lock", style: "margin-left:6px" }, "private") : null),
+        h("td", {}, o && o.scorecard ? [h("span", { class: "bar" }, h("i", { style: "width:" + o.scorecard.percent + "%;background:" + tenColor(Math.round(o.scorecard.percent / 10)) })), o.scorecard.percent + "% · " + o.scorecard.grade] : h("span", { class: "faint" }, o ? "n/a" : "not scanned")),
+        h("td", {}, o ? h("span", {}, h("b", { style: "color:" + scoreColor(o.shield.score) }, o.shield.score), h("span", { class: "muted" }, " " + o.shield.grade + (o.shield.summary.critical ? " · " + o.shield.summary.critical + " critical" : ""))) : h("span", { class: "faint" }, "—")),
+        h("td", {}, o ? (guarded.length ? h("span", { style: "color:var(--ok)" }, "⛨ " + guarded.length) : h("span", { class: "faint" }, "off")) : h("span", { class: "faint" }, "—")),
+        h("td", {}, o && o.context ? h("span", {}, h("b", { style: "color:" + (GRADE_COLOR[o.context.grade] || "inherit") }, o.context.grade), h("span", { class: "muted" }, " ≈" + fmtTok(o.context.worst))) : h("span", { class: "faint" }, "—")),
+        h("td", {}, o ? setupLabel(o.setup) : h("span", { class: "faint" }, "—")),
+        h("td", {}, o ? o.pulls.length : h("span", { class: "faint" }, "—")));
+    })));
+}
+
+/** The few things across the fleet that need a person, most severe first. */
+function attentionCard(scanned) {
+  const items = [];
+  for (const repo of scanned) {
+    const o = cache.get(repo.fullName);
+    const link = tab => "#/" + repo.fullName + "/" + tab;
+    if (o.shield.summary.critical) items.push([0, repo.fullName, o.shield.summary.critical + " critical Shield finding" + (o.shield.summary.critical === 1 ? "" : "s"), link("shield")]);
+    for (const p of o.pulls.filter(p => p.risk.level === "critical" || p.risk.level === "high")) items.push([p.risk.level === "critical" ? 0 : 1, repo.fullName, "PR #" + p.number + " is " + p.risk.level + " risk (" + p.risk.score + ")", link("pulls")]);
+    if ((o.loops || []).some(l => l.status === "needs-review")) items.push([1, repo.fullName, "a verified loop needs review: the agent changed what the checks measure", link("loops")]);
+    if (!o.setup.installed) items.push([2, repo.fullName, "FORGE is not installed", link("overview")]);
+    else if (!(o.harnesses || []).some(x => x.guarded)) items.push([2, repo.fullName, "Guard is not live in any tool", link("harnesses")]);
+    if (o.context && (o.context.grade === "D" || o.context.grade === "F")) items.push([2, repo.fullName, "context budget grade " + o.context.grade + " (≈" + fmtTok(o.context.worst) + " tokens per session)", link("context")]);
+  }
+  if (!scanned.length) return document.createDocumentFragment();
+  items.sort((a, b) => a[0] - b[0]);
+  const label = ["critical", "high", "medium"];
+  return h("div", { class: "card", style: "margin-bottom:14px" }, h("h3", {}, "Needs attention" + (items.length ? " · " + items.length : "")),
+    items.length ? h("ul", { class: "plain attn", style: "list-style:none;padding:0;margin:0" }, items.slice(0, 8).map(([rank, name, text, href]) =>
+      h("li", {}, h("span", { class: "chip sev-" + label[rank] }, label[rank]), h("a", { href }, name), h("span", { class: "muted" }, text)))
+      .concat(items.length > 8 ? [h("li", { class: "faint" }, "and " + (items.length - 8) + " more. Sort the table below to find them.")] : []))
+      : h("p", { class: "muted", style: "margin:0" }, "Nothing needs attention in the scanned repositories."));
 }
 function setupLabel(setup) {
   const [label, dot] = !setup.installed ? ["Not installed", "var(--faint)"] : setup.healthy ? ["Healthy", "var(--ok)"] : ["Needs attention", "var(--warn)"];
@@ -375,16 +470,16 @@ function kpiRing(title, value, label, sub, color) {
     h("div", { class: "ring", style: "--v:" + value + ";--c:" + color }, h("b", {}, label)),
     h("div", {}, h("div", { class: "big" }, value, h("span", { class: "muted", style: "font-size:14px" }, title === "Readiness" ? "%" : "/100")), h("div", { class: "sub" }, sub))));
 }
-function kpiNumber(title, value, sub, ringValue) {
+function kpiNumber(title, value, sub, ringValue, ringColor) {
   return h("div", { class: "card" }, h("h3", {}, title), h("div", { class: "kpi" },
-    typeof ringValue === "number" ? h("div", { class: "ring", style: "--v:" + ringValue + ";--c:" + scoreColor(ringValue) }, h("b", {}, "")) : null,
+    typeof ringValue === "number" ? h("div", { class: "ring", style: "--v:" + ringValue + ";--c:" + (ringColor || scoreColor(ringValue)) }, h("b", {}, "")) : null,
     h("div", {}, h("div", { class: "big" }, value), h("div", { class: "sub" }, sub))));
 }
 function kpiSetup(setup) {
   const sub = !setup.installed ? "Open a setup PR to add FORGE"
-    : setup.healthy ? "Profile " + setup.state.profile + " · " + setup.state.targets.length + " harnesses" + (setup.state.hooks ? " · guards on" : "")
+    : setup.healthy ? "Profile " + setup.state.profile + " · " + setup.state.targets.length + " harnesses" + (setup.state.hooks ? " · Guard on " + ((setup.state.hookTargets || []).length || 1) + " harness" + (((setup.state.hookTargets || []).length || 1) === 1 ? "" : "es") : "")
     : setup.missing.length + " missing · " + setup.outdated.length + " changed · " + setup.added.length + " new";
-  return h("div", { class: "card" }, h("h3", {}, "FORGE setup"), h("div", { class: "kpi" }, h("div", {}, h("div", { style: "font-size:18px" }, setupLabel(setup)), h("div", { class: "sub" }, sub))));
+  return h("div", { class: "card" }, h("h3", {}, "FORGE setup"), h("div", { class: "kpi" }, h("div", {}, h("div", { class: "setupv" }, setupLabel(setup)), h("div", { class: "sub" }, sub))));
 }
 function kpiPulls(pulls) {
   const worst = pulls.slice().sort((a, b) => b.risk.score - a.risk.score)[0];
@@ -444,6 +539,37 @@ function memoryNote(entry) {
     entry.evidence.length || entry.tags.length ? h("div", { class: "evid" }, entry.evidence.map(e => h("code", {}, e)), entry.tags.map(t => h("span", { class: "chip", style: "color:var(--muted)" }, t))) : null);
 }
 
+function mini(tab, icon, color, title, value, detail) {
+  return h("a", { class: "mini", href: tabLink(tab), style: "--c:" + color }, h("span", { class: "ic" }, icon),
+    h("div", { style: "min-width:0" }, h("div", { class: "t" }, title), h("div", { class: "v" }, value), h("div", { class: "d" }, detail)));
+}
+
+/** Guard, context, MCP and harness coverage at a glance (FORGE 4.0 signals). */
+function healthStrip(data) {
+  const installed = data.harnesses.filter(x => x.installed);
+  const guardable = installed.filter(x => x.capabilities.hooks === "native");
+  const guarded = data.harnesses.filter(x => x.guarded);
+  const uncovered = data.harnesses.filter(x => x.detected && !x.installed);
+  const cx = data.context;
+  const mcp = data.mcp || [];
+  const cols = ["claude", "cursor", "codex", "gemini", "copilot", "opencode", "kiro"].filter(t => mcp.some(r => r.targets[t]));
+  const gaps = mcp.filter(r => cols.some(t => !r.targets[t])).length;
+  const guardOk = guardable.length > 0 && guarded.length >= guardable.length;
+  return h("div", { class: "strip" },
+    mini("harnesses", "⛨", guardOk ? "var(--ok)" : guarded.length ? "var(--warn)" : "var(--faint)", "Guard",
+      guarded.length ? "Live in " + guarded.length + (guardable.length ? " of " + guardable.length : "") : "Not live",
+      guarded.length ? guarded.map(x => x.name).join(", ") : "forge install --hooks"),
+    mini("context", cx ? cx.grade : "–", cx ? (GRADE_COLOR[cx.grade] || "var(--faint)") : "var(--faint)", "Context budget",
+      cx ? "≈ " + fmtTok(cx.worst) + " tokens" : "Not measured",
+      cx ? (cx.findings.length ? cx.findings.length + " finding(s) to trim" : "Nothing to trim") : "—"),
+    mini("harnesses", "⇄", mcp.length ? (gaps ? "var(--warn)" : "var(--ok)") : "var(--faint)", "MCP servers",
+      mcp.length ? mcp.length + " server" + (mcp.length === 1 ? "" : "s") : "None committed",
+      mcp.length ? (gaps ? gaps + " missing in some tools" : "Same in every tool") : "forge mcp add context7"),
+    mini("harnesses", "◎", uncovered.length ? "var(--warn)" : installed.length ? "var(--ok)" : "var(--faint)", "Harnesses",
+      installed.length + " of " + data.harnesses.length + " covered",
+      uncovered.length ? "Uses " + uncovered.map(x => x.name).join(", ") + " without FORGE" : installed.length ? "Every tool in use is covered" : "Open a setup PR"));
+}
+
 function overviewTab(data) {
   const sc = data.scorecard;
   const handoff = data.memory.entries.find(e => e.kind === "handoff");
@@ -456,11 +582,12 @@ function overviewTab(data) {
       kpiRing("Shield", data.shield.score, data.shield.grade, data.shield.summary.critical + " critical · " + data.shield.summary.high + " high · " + data.shield.summary.medium + " medium", scoreColor(data.shield.score)),
       kpiSetup(data.setup),
       kpiPulls(data.pulls)),
+    healthStrip(data),
     h("div", { class: "grid2" },
       h("div", { class: "card" }, h("h3", {}, h("span", { class: "n" }, "01"), "Readiness", h("a", { href: tabLink("scorecard") }, "Evidence →")),
         sc ? scorecardBars(sc, true) : h("p", { class: "muted" }, "The scorecard could not be computed for this repository.")),
       h("div", { class: "card" }, h("h3", {}, h("span", { class: "n" }, "02"), "Next actions"),
-        sc && sc.topActions.length ? h("ol", { class: "actions-list" }, sc.topActions.map(a => h("li", {}, mdText(a)))) : h("p", { class: "muted" }, "Nothing urgent. This repository is in good shape."))),
+        sc && sc.topActions.length ? h("ol", { class: "actions-list" }, sc.topActions.map(a => h("li", {}, richText(a)))) : h("p", { class: "muted" }, "Nothing urgent. This repository is in good shape."))),
     h("div", { class: "grid3" },
       h("div", { class: "card" }, h("h3", {}, h("span", { class: "n" }, "03"), "Latest handoff", h("a", { href: tabLink("memory") }, "Memory →")),
         handoff ? [h("div", { class: "muted", style: "font-size:12px;margin-bottom:6px" }, ago(handoff.updatedAt) + (handoff.source ? " · from " + handoff.source : "")), h("div", { class: "body", style: "white-space:pre-wrap;font-size:13px" }, handoff.content.slice(0, 420))]
@@ -569,15 +696,54 @@ function loopsTab(data) {
   ];
 }
 
+const GRADE_COLOR = { A: "var(--ok)", B: "#c7d5b2", C: "#f0c77a", D: "#e8a27a", F: "#e8867a" };
+const fmtTok = n => n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + "k" : String(n);
+
+function contextTab(data) {
+  const cx = data.context;
+  if (!cx) return [h("div", { class: "card" }, h("p", { class: "muted" }, "The context budget could not be computed for this repository."))];
+  const max = Math.max(1, ...cx.harnesses.map(x => x.tokens));
+  const saving = cx.findings.reduce((sum, f) => sum + (f.savings || 0), 0);
+  return [
+    h("p", { class: "section-intro" }, "What each agent loads before your first prompt: instruction files, always-on rules, skill, agent and command indexes, and MCP servers. Token counts are estimates (about 4 characters per token)." + (cx.partial ? " Large repo: the first 120 files were measured." : "")),
+    h("div", { class: "grid2" },
+      h("div", { class: "card" },
+        h("h3", {}, "Per harness · grade ", h("span", { style: "color:" + (GRADE_COLOR[cx.grade] || "inherit") }, cx.grade), " · heaviest ≈ " + fmtTok(cx.worst) + " tokens"),
+        cx.harnesses.length ? cx.harnesses.map(x => h("details", { class: "catd" },
+          h("summary", {}, h("div", { class: "cat" }, h("b", {}, x.harness), h("div", { class: "bar" }, h("i", { style: "width:" + Math.max(2, x.tokens / max * 100) + "%;background:" + (x.tokens > 8000 ? "#f0c77a" : "var(--ok)") })), h("span", { class: "s" }, fmtTok(x.tokens)))),
+          h("ul", { class: "plain ev" },
+            x.top.map(t => h("li", {}, h("code", {}, t.file), " ≈ " + fmtTok(t.tokens))),
+            h("li", { class: "muted" }, x.items + " item(s)" + (x.mcpServers ? " · " + x.mcpServers + " MCP server(s)" : ""))))) : h("p", { class: "muted" }, "No agent instructions, rules, skills or MCP servers are committed.")),
+      h("div", { class: "stack" },
+        h("div", { class: "card" }, h("h3", {}, "Findings" + (saving ? " · up to ≈" + fmtTok(saving) + " tokens per session to save" : "")),
+          cx.findings.length ? h("ul", { class: "plain ev" }, cx.findings.map(f => h("li", { class: f.severity === "high" ? "todo" : "" }, h("span", { class: "chip sev-" + f.severity }, f.severity), " ", mdText(f.message), h("div", { class: "muted", style: "font-size:12.5px;margin-top:3px" }, "→ " + f.fix)))) : h("p", { class: "muted" }, "No context waste found.")),
+        h("div", { class: "card" }, h("h3", {}, "Run it locally"), h("p", { class: "muted", style: "margin:0;font-size:13px" }, "Local runs also see uncommitted files and @imports."), copyCmd("forge context --verbose"), copyCmd("forge context --max 8000   # CI gate")))),
+  ];
+}
+
+function mcpMatrixCard(rows) {
+  if (!rows || !rows.length) return h("div", { class: "card" }, h("h3", {}, "MCP servers"), h("p", { class: "muted" }, "No MCP servers are committed."), copyCmd("forge mcp add context7 playwright"));
+  const cols = ["claude", "cursor", "codex", "gemini", "copilot", "opencode", "kiro"].filter(t => rows.some(r => r.targets[t]));
+  const gaps = rows.filter(r => cols.some(t => !r.targets[t])).length;
+  return h("div", { class: "card" }, h("h3", {}, "MCP servers · " + rows.length),
+    h("table", { class: "findings" }, h("thead", {}, h("tr", {}, h("th", {}, "Server"), cols.map(c => h("th", {}, c)))),
+      h("tbody", {}, rows.map(r => h("tr", {}, h("td", {}, h("code", {}, r.name)), cols.map(c => h("td", { style: "color:" + (r.targets[c] ? "var(--ok)" : "var(--faint)") }, r.targets[c] ? "✓" : "·")))))),
+    gaps ? h("div", { class: "banner", style: "margin-top:12px" }, gaps + " server(s) are missing from some harnesses.", copyCmd("forge mcp sync")) : null);
+}
+
 function harnessesTab(data) {
   const installed = data.harnesses.filter(x => x.installed).length;
   const uncovered = data.harnesses.filter(x => x.detected && !x.installed);
+  const guarded = data.harnesses.filter(x => x.guarded).length;
+  const guardable = data.harnesses.filter(x => x.installed && !x.guarded && x.capabilities.hooks === "native");
   return [
-    h("p", { class: "section-intro" }, installed + " of " + data.harnesses.length + " harnesses installed. Capability labels are FORGE's tested integration level, not everything the tool supports."),
+    h("p", { class: "section-intro" }, installed + " of " + data.harnesses.length + " harnesses installed · FORGE Guard live in " + guarded + ". Capability labels are FORGE's tested integration level, not everything the tool supports."),
+    guardable.length ? h("div", { class: "banner" }, "FORGE Guard can run inside " + guardable.map(x => x.name).join(", ") + " too: dangerous commands, secret reads and unverified stops get blocked natively.", copyCmd("forge install --hooks")) : null,
     uncovered.length ? h("div", { class: "banner" }, "This repo uses " + uncovered.map(x => x.name).join(", ") + " but FORGE isn't installed for " + (uncovered.length === 1 ? "it" : "them") + ".", copyCmd("forge install --target " + [...new Set([...(data.setup.state ? data.setup.state.targets : []), ...uncovered.map(x => x.target)])].join(","))) : null,
     h("div", { class: "hgrid" }, data.harnesses.map(x => h("div", { class: "hcard" + (x.installed ? " on" : "") },
-      h("div", { class: "t" }, x.name, h("span", { class: "chip " + (x.installed ? "st-active" : x.detected ? "st-candidate" : "st-stalled") }, x.installed ? "installed" : x.detected ? "detected" : "not used")),
+      h("div", { class: "t" }, x.name, x.guarded ? h("span", { class: "chip guard", title: "FORGE Guard hooks are installed for this harness" }, "guarded") : null, h("span", { class: "chip " + (x.installed ? "st-active" : x.detected ? "st-candidate" : "st-stalled") }, x.installed ? "installed" : x.detected ? "detected" : "not used")),
       h("div", { class: "caps" }, Object.entries(x.capabilities).map(([k, v]) => [h("span", { class: "muted" }, k), h("span", { class: "st-" + v }, v)]))))),
+    h("div", { style: "margin-top:18px" }, mcpMatrixCard(data.mcp)),
   ];
 }
 
@@ -641,6 +807,7 @@ function counts(data) {
     memory: [data.memory.entries.length, false],
     instincts: [data.instincts.items.filter(i => i.status === "candidate").length, false],
     loops: [data.loops.length, data.loops.some(l => l.status === "needs-review")],
+    context: [data.context ? data.context.findings.length : 0, Boolean(data.context && data.context.findings.some(f => f.severity === "high"))],
     harnesses: [data.harnesses.filter(x => x.installed).length, data.harnesses.some(x => x.detected && !x.installed)],
   };
 }
@@ -653,13 +820,16 @@ function renderRepo(data) {
   const c = counts(data);
   const tabs = h("nav", { class: "tabs", "aria-label": "Repository sections" }, TABS.map(([id, label]) => h("a", { href: "#/" + name + "/" + id, class: current.tab === id ? "on" : "", "aria-current": current.tab === id ? "page" : null },
     label, c[id] && c[id][0] ? h("span", { class: "count" + (c[id][1] ? " alert" : "") }, c[id][0]) : null)));
-  const views = { overview: overviewTab, scorecard: scorecardTab, shield: shieldTab, pulls: d => [h("div", { class: "card" }, h("h3", {}, "Change risk · open pull requests"), pullsList(d.pulls))], memory: memoryTab, instincts: instinctsTab, loops: loopsTab, harnesses: harnessesTab, activity: activityTab };
+  const views = { overview: overviewTab, scorecard: scorecardTab, shield: shieldTab, pulls: d => [h("div", { class: "card" }, h("h3", {}, "Change risk · open pull requests"), pullsList(d.pulls))], memory: memoryTab, instincts: instinctsTab, loops: loopsTab, context: contextTab, harnesses: harnessesTab, activity: activityTab };
+  document.title = name + " · " + (TABS.find(([id]) => id === current.tab) || TABS[0])[1] + " · FORGE";
   main.replaceChildren(
     h("div", { class: "head" },
-      h("div", {}, h("h1", {}, name), h("div", { class: "meta" }, "Default branch ", h("code", {}, data.repository.defaultBranch), data.repository.private ? " · private" : " · public", " · scanned " + ago(data.generatedAt))),
+      h("div", {}, h("h1", {}, name), h("div", { class: "meta" }, "Default branch ", h("code", {}, data.repository.defaultBranch), data.repository.private ? " · private" : " · public", " · scanned ", h("span", { "data-ago": data.generatedAt }, ago(data.generatedAt)))),
       h("div", { class: "actions" }, h("a", { class: "btn", href: "https://github.com/" + name, target: "_blank", rel: "noopener noreferrer" }, "GitHub ↗"), h("button", { class: "btn", onclick: () => loadRepo(name, current.tab, "refresh") }, "Rescan"), setupButton)),
     tabs,
-    ...[(views[current.tab] || overviewTab)(data)].flat(Infinity).filter(Boolean));
+    h("div", { class: "fade" }, ...[(views[current.tab] || overviewTab)(data)].flat(Infinity).filter(Boolean)));
+  const active = tabs.querySelector("a.on");
+  if (active && active.scrollIntoView) active.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 
 /** mode: undefined = use the cached scan if there is one; "refresh" = rescan with a loading state; "quiet" = rescan in place. */
@@ -727,6 +897,23 @@ async function start() {
   if (session.reauthRequired) ui.main.before(h("div", { class: "banner", style: "margin:16px 30px 0" }, "Your session was created before the dashboard existed. ", h("a", { href: "/api/github/login" }, "Sign in again"), " to load your repositories."));
   if (new URLSearchParams(location.search).get("github") === "connected") history.replaceState(null, "", "/app/" + location.hash);
   window.addEventListener("hashchange", route);
+  document.addEventListener("keydown", event => {
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    const typing = /^(?:INPUT|TEXTAREA|SELECT)$/.test(document.activeElement && document.activeElement.tagName || "");
+    if (event.key === "Escape" && typing) { document.activeElement.blur(); return; }
+    if (typing) return;
+    if (event.key === "/") { event.preventDefault(); ui.search.focus(); return; }
+    if (event.key === "g") { location.hash = "#/"; return; }
+    if (!current.name) return;
+    if (event.key === "r") { loadRepo(current.name, current.tab, "refresh"); return; }
+    if (event.key === "[" || event.key === "]") {
+      const index = TABS.findIndex(([id]) => id === current.tab);
+      const next = TABS[(index + (event.key === "]" ? 1 : TABS.length - 1)) % TABS.length];
+      location.hash = "#/" + current.name + "/" + next[0];
+    }
+  });
+  // Keep relative times honest while the page stays open.
+  setInterval(() => { for (const el of document.querySelectorAll("[data-ago]")) el.textContent = ago(el.getAttribute("data-ago")); }, 30_000);
   route();
 }
 start();

@@ -47,6 +47,7 @@ import { analyzeDependencies, formatDependencyIntelligence } from "./core/depend
 import { generateRemediationPlan, formatRemediationPlan } from "./core/remediation-planner.js";
 import { addProjectMemory, buildProjectMemoryContext, globalMemoryRoot, latestHandoff, listProjectMemory, PROJECT_MEMORY_KINDS, removeProjectMemory, searchMemory, type ProjectMemoryKind } from "./core/project-memory.js";
 import { HOOK_EVENTS, runHarnessHook, type HookEventName } from "./core/harness-hooks.js";
+import { NATIVE_HOOK_HARNESSES, runNativeHook, type NativeHookHarness } from "./core/hook-adapters.js";
 import { analyzeRepository, collectLocalRepository, formatRepoProfile, renderProjectSkill } from "./github/repo-analysis.js";
 import { mkdir as mkdirAsync } from "node:fs/promises";
 import { formatSkillContext, loadSkillRegistry, selectSkills } from "./core/skill-registry.js";
@@ -56,6 +57,13 @@ import { detectHarnessTargets, doctorHarness, formatDoctorReport, formatInstallR
 import { loadHarnessCatalog, type CatalogKind } from "./core/harness-catalog.js";
 import { addManualInstinct, evolveInstincts, exportInstincts, formatInstinctList, importInstincts, learnInstincts, loadInstincts, removeInstinct, setInstinctStatus, type InstinctStatus } from "./core/instincts.js";
 import { buildCostReport, formatCostReport } from "./core/session-cost.js";
+import { forgeStatus, formatStatus } from "./core/forge-status.js";
+import { analyzeContext, formatContextReport } from "./core/context-budget.js";
+import { consult, formatConsult } from "./core/consult.js";
+import { detectProjectLanguages as detectStacks } from "./core/harness-catalog.js";
+import { MCP_CATALOG, MCP_TARGETS, addMcpServers, detectMcpTargets, formatChanges, formatMatrix, mcpMatrix, readSyncSource, removeMcpServers, type McpTarget } from "./core/mcp-sync.js";
+import { cleanRace, formatRace, listRaces, parseContestants, pickRace, readRace, runRace } from "./core/agent-race.js";
+import { buildGuardReport, checkGuard, formatGuardCheck, formatGuardReport, readGuardEvents } from "./core/guard-report.js";
 import { renderStatusLine } from "./core/statusline.js";
 import { formatLoop, LOOP_AGENTS, listLoops, readLoop, runVerifiedLoop, type LoopAgent } from "./core/verified-loop.js";
 import { buildScorecard, formatScorecard, formatScorecardMarkdown } from "./core/harness-scorecard.js";
@@ -133,7 +141,7 @@ function readAgentDurationBudgets(): Record<string, number> | undefined {
   return budgets;
 }
 
-const VERSION = "3.0.0";
+const VERSION = "4.0.0";
 
 const HELP = `
 FORGE — The AI Engineering Workbench
@@ -143,11 +151,21 @@ Usage:
 
 Commands:
   init [path]      Create a safe, local-first .forge starter workspace
+  status [path]    One screen: install health, where Guard is live, context budget, MCP coverage, last loop and race,
+                   and the next commands to run [--json]
+  context [path]   Context budget: what each harness loads before the first prompt, per file, with fixes
+                   [--verbose] [--json] [--max TOKENS]  (exit 4 when the heaviest harness exceeds --max)
+  consult "TASK"   Find the agents, skills, commands, rules and MCP servers for a task, with the command to add them
+                   [--kind agent,skill,command,rule,mcp] [--limit N] [--path DIR] [--json]
   install [path]   Install FORGE agents, skills, commands and rules (Claude Code, Cursor, Codex, OpenCode, Gemini; Copilot, Windsurf, Kiro, Cline, Zed opt-in)
                    [--target claude,cursor,codex,opencode,gemini|all] [--profile minimal|standard|full] [--lang ts,python] [--hooks] [--dry-run] [--force]
+                   --hooks wires Guard into Claude Code, Cursor, Codex and Gemini CLI
   analyze [path]   Learn the repo (stack, scripts, tests, commit style) and generate a project skill [--write] [--json]
   hook EVENT       Claude Code runtime hook (pre-tool, post-edit, stop, session-start, prompt-submit, pre-compact,
                    session-end); reads hook JSON on stdin
+  hook --harness cursor|codex|gemini NATIVE_EVENT
+                   The same hooks in Cursor, Codex and Gemini CLI's own formats (installed by install --hooks)
+  guard ACTION     FORGE Guard: check "CMD" | check --file PATH [--write] | log [--days N] | status [--json]
   statusline       Claude Code status line: model, branch, unverified edits, last verification, guard blocks, cost
   cost [path]      Token usage and estimated spend per session, model and day [--json] [--days N]
   uninstall [path] Remove unmodified FORGE harness files and managed blocks [--dry-run] [--force]
@@ -161,6 +179,12 @@ Commands:
   loop ACTION      Verified agent loop: start | status [ID] | list
                    start [path] --goal TEXT --check CMD [--check CMD...] [--agent claude|codex|gemini|opencode|command]
                    [--agent-cmd "prog args"] [--agent-arg ARG...] [--max-iterations N] [--allow-dirty] [--dry-run] [--json]
+  race [start]     Agent race: the same goal for several agents in isolated git worktrees, ranked by FORGE's checks
+                   [path] --goal TEXT --check CMD [--check CMD...] [--agents claude,codex,gemini,opencode]
+                   [--contestant name="prog args"] [--setup "npm ci"] [--max-iterations N] [--json]
+                   race status [ID] | list | pick [ID] [NAME] | clean [ID]
+  mcp ACTION       One MCP config for every harness: catalog | list | add NAME.. | sync [--from claude] | remove NAME..
+                   [--target claude,cursor,codex,gemini,copilot,opencode,kiro|all] [--dry-run] [--force] [--json]
   harnesses        List supported harnesses and their actual FORGE integration capabilities [--json]
   catalog          List the FORGE catalog [--kind agent|skill|command|rule] [--json]
   shield [path]    Security review of agent settings, hooks, MCP servers, instructions and workflows
@@ -286,12 +310,16 @@ async function main(args: string[]): Promise<void> {
     case "install":
     case "repair": {
       if (rest.includes("--help")) {
-        process.stdout.write("Usage: forge " + command + " [path] [--target LIST|default|all] [--profile minimal|standard|full] [--lang LIST] [--hooks|--no-hooks] [--statusline] [--hook-command CMD] [--dry-run] [--force] [--json]\n");
+        process.stdout.write("Usage: forge " + command + " [path] [--target LIST|default|all] [--profile minimal|standard|full] [--lang LIST] [--hooks|--no-hooks] [--statusline] [--hook-command CMD] [--with kind:id,...] [--without kind:id,...] [--dry-run] [--force] [--json]\n");
         return;
       }
       try {
-        const options = parseHarnessArgs(rest, ["--target", "--profile", "--lang", "--hook-command"], ["--dry-run", "--force", "--json", "--hooks", "--no-hooks", "--statusline", "--no-statusline"]);
+        const options = parseHarnessArgs(rest, ["--target", "--profile", "--lang", "--hook-command", "--with", "--without"], ["--dry-run", "--force", "--json", "--hooks", "--no-hooks", "--statusline", "--no-statusline"]);
         if (options.flags.has("--hooks") && options.flags.has("--no-hooks")) throw new Error("Use either --hooks or --no-hooks");
+        const listOf = (value: string | undefined) => (value ?? "").split(",").map(v => v.trim()).filter(Boolean);
+        const previousExtras = (await doctorHarness({ projectPath: options.path, forgeVersion: VERSION }).catch(() => undefined))?.extras ?? [];
+        const without = new Set(listOf(options.values.get("--without")));
+        const extras = [...new Set([...previousExtras, ...listOf(options.values.get("--with"))])].filter(extra => !without.has(extra));
         const existing = command === "repair" ? await doctorHarness({ projectPath: options.path, forgeVersion: VERSION }) : undefined;
         if (command === "repair" && !existing?.installed) throw new Error("FORGE harness is not installed here. Run `forge install` first.");
         const result = await installHarness({
@@ -305,6 +333,7 @@ async function main(args: string[]): Promise<void> {
           profile: parseProfile(options.values.get("--profile") ?? existing?.profile),
           targets: options.values.has("--target") ? parseTargets(options.values.get("--target")) : (existing?.targets ?? [...new Set([...parseTargets("default"), ...await detectHarnessTargets(options.path)])]),
           ...(options.values.has("--lang") ? { languages: (options.values.get("--lang") ?? "").split(",").map(v => normalizeLanguage(v)).filter(Boolean) } : existing?.languages ? { languages: existing.languages } : {}),
+          ...(extras.length ? { extras } : {}),
         });
         process.stdout.write(options.flags.has("--json") ? JSON.stringify({ ...result, plan: { ...result.plan, files: result.plan.files.map(f => ({ path: f.path, targets: f.targets, item: f.item })) } }, null, 2) + "\n" : formatInstallResult(result) + "\n");
         if (result.conflicts) process.exitCode = 3;
@@ -482,6 +511,196 @@ async function main(args: string[]): Promise<void> {
       }
       return;
     }
+    case "race": {
+      const first = rest[0];
+      const action = first && ["start", "status", "show", "list", "pick", "clean"].includes(first) ? first : "start";
+      const raceArgs = action === "start" && first !== "start" ? rest : rest.slice(1);
+      try {
+        const checks: string[] = [];
+        const custom: Array<{ name: string; command: string }> = [];
+        const remaining: string[] = [];
+        for (let i = 0; i < raceArgs.length; i++) {
+          const arg = raceArgs[i] as string;
+          if (arg === "--check" || arg === "--contestant") {
+            const value = raceArgs[i + 1];
+            if (value === undefined) throw new Error(arg + " requires a value");
+            if (arg === "--check") checks.push(value);
+            else {
+              const eq = value.indexOf("=");
+              if (eq < 1) throw new Error('--contestant must look like name="program args"');
+              custom.push({ name: value.slice(0, eq), command: value.slice(eq + 1) });
+            }
+            i += 1;
+          } else remaining.push(arg);
+        }
+        const raceId = remaining.find(arg => /^race-[\w-]+$/.test(arg));
+        const positional = remaining.filter(arg => arg !== raceId);
+        if (action === "pick") {
+          const name = positional.find(arg => !arg.startsWith("--") && /^[a-z0-9][a-z0-9_-]{0,31}$/.test(arg) && !arg.includes("/"));
+          const options = parseHarnessArgs(positional.filter(arg => arg !== name), [], []);
+          const result = await pickRace(options.path, raceId, name);
+          process.stdout.write(`Applied ${result.entry.name}'s changes from ${result.race.id} (${result.files.length} file(s)):\n${result.files.map(f => "  " + f).join("\n")}\nReview with git diff, then commit. Remove the worktrees with: forge race clean ${result.race.id}\n`);
+          return;
+        }
+        const options = parseHarnessArgs(positional, ["--goal", "--agents", "--max-iterations", "--setup"], ["--json", "--no-link"]);
+        if (action === "clean") {
+          const result = await cleanRace(options.path, raceId);
+          process.stdout.write(`Removed ${result.removed.length} worktree(s) from ${result.race.id}. The receipt stays in .forge/races/.\n`);
+          return;
+        }
+        if (action === "list") {
+          const races = await listRaces(options.path);
+          if (options.flags.has("--json")) process.stdout.write(JSON.stringify(races, null, 2) + "\n");
+          else process.stdout.write(races.length ? races.map(r => `${r.id}  ${(r.winner ? "winner " + r.winner : "no winner").padEnd(18)} ${r.entries.length} agents  ${r.goal.split("\n")[0]?.slice(0, 60)}`).join("\n") + "\n" : "No races yet.\n");
+          return;
+        }
+        if (action === "status" || action === "show") {
+          const race = await readRace(options.path, raceId);
+          if (!race) { process.stdout.write("No races yet. Start one with: forge race --goal \"...\" --check \"npm test\" --agents claude,codex\n"); return; }
+          process.stdout.write((options.flags.has("--json") ? JSON.stringify(race, null, 2) : formatRace(race)) + "\n");
+          return;
+        }
+        const contestants = parseContestants(options.values.get("--agents") ?? (custom.length ? "" : "claude,codex"), custom);
+        const maxIterations = options.values.has("--max-iterations") ? Number(options.values.get("--max-iterations")) : undefined;
+        if (maxIterations !== undefined && (!Number.isInteger(maxIterations) || maxIterations < 1 || maxIterations > 20)) throw new Error("--max-iterations must be 1-20");
+        const json = options.flags.has("--json");
+        const setup = options.values.get("--setup");
+        const race = await runRace({
+          projectPath: options.path,
+          goal: options.values.get("--goal") ?? "",
+          checks,
+          contestants,
+          ...(maxIterations ? { maxIterations } : {}),
+          ...(setup ? { setup } : {}),
+          linkNodeModules: !options.flags.has("--no-link"),
+          onEvent: message => { if (!json) process.stderr.write(`forge race: ${message}\n`); },
+        });
+        process.stdout.write((json ? JSON.stringify(race, null, 2) : formatRace(race)) + "\n");
+        process.exitCode = race.winner ? 0 : 1;
+      } catch (error) {
+        process.stderr.write("FORGE race failed: " + (error instanceof Error ? error.message : String(error)) + "\n");
+        process.exitCode = 1;
+      }
+      return;
+    }
+    case "mcp": {
+      const [action = "list", ...mcpArgs] = rest;
+      try {
+        const names = mcpArgs.filter(arg => !arg.startsWith("--") && /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(arg) && !["."].includes(arg));
+        const options = parseHarnessArgs(mcpArgs.filter(arg => !names.includes(arg)), ["--target", "--from", "--path"], ["--dry-run", "--force", "--json"]);
+        const projectPath = options.values.get("--path") ? path.resolve(options.values.get("--path") as string) : options.path;
+        const resolveTargets = async (): Promise<McpTarget[]> => {
+          const raw = options.values.get("--target");
+          if (raw) {
+            const list = raw === "all" ? [...MCP_TARGETS] : raw.split(",").map(t => t.trim()).filter(Boolean);
+            for (const t of list) if (!(MCP_TARGETS as readonly string[]).includes(t)) throw new Error(`--target must be from ${MCP_TARGETS.join(", ")} or all`);
+            return list as McpTarget[];
+          }
+          const installed = (await doctorHarness({ projectPath, forgeVersion: VERSION }).catch(() => undefined))?.targets ?? [];
+          const detected = await detectHarnessTargets(projectPath).catch(() => []);
+          const chosen = [...new Set<string>(["claude", ...installed, ...detected])].filter(t => (MCP_TARGETS as readonly string[]).includes(t)) as McpTarget[];
+          return chosen;
+        };
+        if (action === "catalog") {
+          if (options.flags.has("--json")) process.stdout.write(JSON.stringify(MCP_CATALOG, null, 2) + "\n");
+          else process.stdout.write(MCP_CATALOG.map(e => `  ${e.name.padEnd(20)} ${e.transport === "http" ? "remote" : "local "}  ${e.auth === "oauth" ? "OAuth  " : e.auth === "env" ? "env key" : "no auth"}  ${e.description}`).join("\n") + "\n\nAdd with: forge mcp add context7 playwright   (pinned versions, written for every harness)\n");
+          return;
+        }
+        if (action === "list" || action === "status") {
+          const rows = await mcpMatrix(projectPath);
+          process.stdout.write((options.flags.has("--json") ? JSON.stringify(rows, null, 2) : formatMatrix(rows)) + "\n");
+          return;
+        }
+        const targets = await resolveTargets();
+        const dryRun = options.flags.has("--dry-run");
+        if (action === "add") {
+          if (!names.length) throw new Error("Name at least one server from `forge mcp catalog`.");
+          const servers = names.map(name => { const entry = MCP_CATALOG.find(e => e.name === name); if (!entry) throw new Error(`"${name}" is not in the FORGE MCP catalog. Add your own server to .mcp.json and run \`forge mcp sync\`.`); return entry; });
+          const changes = await addMcpServers(servers, { projectPath, targets, dryRun, force: options.flags.has("--force"), source: "catalog" });
+          process.stdout.write(`FORGE MCP ${dryRun ? "(dry run) " : ""}→ ${targets.join(", ")}\n${formatChanges(changes)}\n`);
+          const needs = servers.flatMap(s => [...(s.env ?? []), ...Object.values(s.headers ?? {})]);
+          if (needs.length) process.stdout.write(`\nSet ${[...new Set(needs)].join(", ")} in your environment; FORGE writes references, never values.\n`);
+          const oauth = servers.filter(s => s.auth === "oauth").map(s => s.name);
+          if (oauth.length) process.stdout.write(`${oauth.join(", ")} sign in with OAuth the first time each tool connects (Codex: codex mcp login <name>).\n`);
+          return;
+        }
+        if (action === "sync") {
+          const from = (options.values.get("--from") ?? "claude") as McpTarget;
+          if (!(MCP_TARGETS as readonly string[]).includes(from)) throw new Error(`--from must be one of ${MCP_TARGETS.join(", ")}`);
+          const { servers, problems } = await readSyncSource(projectPath, from);
+          const changes = await addMcpServers(servers, { projectPath, targets: targets.filter(t => t !== from), dryRun, force: options.flags.has("--force"), source: "sync" });
+          process.stdout.write(`FORGE MCP sync ${dryRun ? "(dry run) " : ""}from ${from} → ${targets.filter(t => t !== from).join(", ") || "(no other harnesses)"}\n${formatChanges(changes)}\n`);
+          for (const p of problems) process.stdout.write(`  not copied  ${p.name}: ${p.problem}\n`);
+          if (problems.length) process.exitCode = 3;
+          return;
+        }
+        if (action === "remove") {
+          if (!names.length) throw new Error("Name the server(s) to remove.");
+          const changes = await removeMcpServers(names, { projectPath, targets: options.values.get("--target") ? targets : [...MCP_TARGETS], dryRun, force: options.flags.has("--force") });
+          process.stdout.write(formatChanges(changes) + "\n");
+          return;
+        }
+        throw new Error(`Unknown mcp action "${action}". Use catalog, list, add, sync or remove.`);
+      } catch (error) {
+        process.stderr.write("FORGE mcp failed: " + (error instanceof Error ? error.message : String(error)) + "\n");
+        process.exitCode = 1;
+      }
+      return;
+    }
+    case "status": {
+      try {
+        const options = parseHarnessArgs(rest, [], ["--json"]);
+        const status = await forgeStatus(options.path, VERSION);
+        process.stdout.write((options.flags.has("--json") ? JSON.stringify(status, null, 2) : formatStatus(status)) + "\n");
+      } catch (error) {
+        process.stderr.write("FORGE status failed: " + (error instanceof Error ? error.message : String(error)) + "\n");
+        process.exitCode = 1;
+      }
+      return;
+    }
+    case "context": {
+      try {
+        const options = parseHarnessArgs(rest, ["--max"], ["--json", "--verbose"]);
+        const report = await analyzeContext(options.path);
+        process.stdout.write((options.flags.has("--json") ? JSON.stringify(report, null, 2) : formatContextReport(report, { verbose: options.flags.has("--verbose") })) + "\n");
+        if (options.values.has("--max")) {
+          const max = Number(options.values.get("--max"));
+          if (!Number.isInteger(max) || max < 1) throw new Error("--max must be a positive number of tokens");
+          if (report.worst > max) { process.stderr.write(`Context budget exceeded: heaviest harness ≈${report.worst} tokens > ${max}.\n`); process.exitCode = 4; }
+        }
+      } catch (error) {
+        process.stderr.write("FORGE context failed: " + (error instanceof Error ? error.message : String(error)) + "\n");
+        process.exitCode = 1;
+      }
+      return;
+    }
+    case "consult": {
+      try {
+        const words: string[] = [];
+        let projectPath = ".";
+        let json = false;
+        let limit = 12;
+        let kinds: string[] | undefined;
+        for (let i = 0; i < rest.length; i++) {
+          const arg = rest[i] as string;
+          if (arg === "--json") json = true;
+          else if (arg === "--path") projectPath = rest[++i] ?? ".";
+          else if (arg === "--limit") { limit = Number(rest[++i]); if (!Number.isInteger(limit) || limit < 1 || limit > 50) throw new Error("--limit must be 1-50"); }
+          else if (arg === "--kind") { kinds = (rest[++i] ?? "").split(",").filter(Boolean); for (const k of kinds) if (!["agent", "skill", "command", "rule", "mcp"].includes(k)) throw new Error("--kind must be agent, skill, command, rule or mcp"); }
+          else if (arg.startsWith("--")) throw new Error("Unknown option " + arg);
+          else words.push(arg);
+        }
+        const query = words.join(" ").trim();
+        if (!query) throw new Error('Describe what you are working on, e.g. forge consult "security review of auth code"');
+        const languages = await detectStacks(path.resolve(projectPath)).catch(() => [] as string[]);
+        const matches = await consult(query, { limit, languages, ...(kinds ? { kinds: kinds as Array<"agent" | "skill" | "command" | "rule" | "mcp"> } : {}) });
+        process.stdout.write((json ? JSON.stringify({ query, languages, matches }, null, 2) : formatConsult(query, matches)) + "\n");
+      } catch (error) {
+        process.stderr.write("FORGE consult failed: " + (error instanceof Error ? error.message : String(error)) + "\n");
+        process.exitCode = 1;
+      }
+      return;
+    }
     case "harnesses": {
       try {
         const options = parseHarnessArgs(rest, [], ["--json"]);
@@ -552,6 +771,68 @@ async function main(args: string[]): Promise<void> {
       process.stdout.write(await renderStatusLine(Buffer.concat(chunks).toString("utf8"), process.cwd()) + "\n");
       return;
     }
+    case "guard": {
+      const sub = rest[0] ?? "log";
+      const usage = "Usage: forge guard check \"<command>\" [--path DIR] [--json]\n       forge guard check --file PATH [--write] [--path DIR] [--json]\n       forge guard log [path] [--days N] [--limit N] [--json]\n       forge guard status [path] [--json]\n";
+      try {
+        if (sub === "--help" || sub === "help") { process.stdout.write(usage); return; }
+        if (sub === "check") {
+          const args = rest.slice(1);
+          let projectPath = ".";
+          let file: string | undefined;
+          let write = false;
+          let json = false;
+          const words: string[] = [];
+          for (let i = 0; i < args.length; i += 1) {
+            const arg = args[i] ?? "";
+            if (arg === "--path") { projectPath = args[++i] ?? "."; }
+            else if (arg === "--file") { file = args[++i]; if (!file) throw new Error("--file requires a path"); }
+            else if (arg === "--write") write = true;
+            else if (arg === "--json") json = true;
+            else if (arg === "--") { words.push(...args.slice(i + 1)); break; }
+            else words.push(arg);
+          }
+          if (!file && !words.length) throw new Error("Give a command to check, or --file PATH");
+          const result = await checkGuard(path.resolve(projectPath), file ? { file, write } : { command: words.join(" ") });
+          process.stdout.write((json ? JSON.stringify(result, null, 2) : formatGuardCheck(result)) + "\n");
+          process.exitCode = result.verdict.decision === "deny" ? 2 : 0;
+          return;
+        }
+        if (sub === "log" || sub === "status") {
+          const options = parseHarnessArgs(rest.slice(1), ["--days", "--limit"], ["--json"]);
+          if (sub === "status") {
+            const doctor = await doctorHarness({ projectPath: options.path, forgeVersion: VERSION });
+            const targets = doctor.hookTargets ?? [];
+            const events = await readGuardEvents(options.path);
+            const status = { installed: doctor.installed, guarded: targets, unguarded: (doctor.targets ?? []).filter(target => !targets.includes(target)), interventions: events.length };
+            if (options.flags.has("--json")) process.stdout.write(JSON.stringify(status, null, 2) + "\n");
+            else process.stdout.write([
+              "FORGE Guard",
+              "  live in:   " + (targets.length ? targets.join(", ") : "none (run `forge install --hooks`)"),
+              ...(status.unguarded.length ? ["  no hooks:  " + status.unguarded.join(", ") + " (instructions only)"] : []),
+              "  blocked or asked so far: " + events.length,
+            ].join("\n") + "\n");
+            return;
+          }
+          let since: Date | undefined;
+          if (options.values.has("--days")) {
+            const days = Number(options.values.get("--days"));
+            if (!Number.isInteger(days) || days < 1 || days > 3650) throw new Error("--days must be a whole number of days");
+            since = new Date(Date.now() - days * 86_400_000);
+          }
+          const limit = options.values.has("--limit") ? Number(options.values.get("--limit")) : 10;
+          if (!Number.isInteger(limit) || limit < 1 || limit > 500) throw new Error("--limit must be between 1 and 500");
+          const report = buildGuardReport(await readGuardEvents(options.path), { ...(since ? { since } : {}), limit });
+          process.stdout.write((options.flags.has("--json") ? JSON.stringify(report, null, 2) : formatGuardReport(report)) + "\n");
+          return;
+        }
+        throw new Error("Unknown guard subcommand " + sub + "\n" + usage);
+      } catch (error) {
+        process.stderr.write("FORGE guard failed: " + (error instanceof Error ? error.message : String(error)) + "\n");
+        process.exitCode = 1;
+      }
+      return;
+    }
     case "cost":
     case "cost-report": {
       try {
@@ -571,9 +852,17 @@ async function main(args: string[]): Promise<void> {
       return;
     }
     case "hook": {
-      const event = rest[0] as HookEventName | undefined;
-      if (!event || !HOOK_EVENTS.includes(event)) {
-        process.stderr.write("Usage: forge hook " + HOOK_EVENTS.join("|") + "  (reads Claude Code hook JSON on stdin)\n");
+      const harnessAt = rest.indexOf("--harness");
+      const harness = harnessAt >= 0 ? rest[harnessAt + 1] : undefined;
+      const positional = harnessAt >= 0 ? rest.filter((_, i) => i !== harnessAt && i !== harnessAt + 1) : rest;
+      const event = positional[0];
+      if (harness !== undefined && !(NATIVE_HOOK_HARNESSES as readonly string[]).includes(harness)) {
+        process.stderr.write("Usage: forge hook --harness " + NATIVE_HOOK_HARNESSES.join("|") + " <native event>\n");
+        process.exitCode = 1;
+        return;
+      }
+      if (!harness && (!event || !HOOK_EVENTS.includes(event as HookEventName))) {
+        process.stderr.write("Usage: forge hook " + HOOK_EVENTS.join("|") + "  (reads Claude Code hook JSON on stdin)\n       forge hook --harness " + NATIVE_HOOK_HARNESSES.join("|") + " <native event>\n");
         process.exitCode = 1;
         return;
       }
@@ -587,7 +876,10 @@ async function main(args: string[]): Promise<void> {
           chunks.push(part);
         }
       }
-      const output = await runHarnessHook(event, Buffer.concat(chunks).toString("utf8"));
+      const raw = Buffer.concat(chunks).toString("utf8");
+      const output = harness
+        ? await runNativeHook(harness as NativeHookHarness, event ?? "", raw)
+        : await runHarnessHook(event as HookEventName, raw);
       if (output.json) process.stdout.write(JSON.stringify(output.json) + "\n");
       process.exitCode = output.exitCode;
       return;

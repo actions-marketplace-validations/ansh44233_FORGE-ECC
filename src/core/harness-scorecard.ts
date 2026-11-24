@@ -157,11 +157,17 @@ export async function buildScorecard(options: ScorecardOptions): Promise<Scoreca
   {
     const c = new Category("guards", "Runtime guards");
     const settingsText = await readText(path.join(root, ".claude", "settings.json")) ?? "";
-    if (c.check(Boolean(doctor?.hooks) || /hook pre-tool/.test(settingsText), 4, "FORGE runtime hooks merged into Claude Code settings", "Enable runtime guards: `forge install --hooks` (blocks destructive commands, requires verification, denies .env reads).")) {
-      c.check(/hook pre-tool/.test(settingsText), 2, "pre-tool guard blocks destructive commands", "Add the pre-tool guard hook (`forge install --hooks`).");
-      c.check(/hook stop/.test(settingsText), 2, "stop hook requires verification evidence", "Add the stop hook so sessions cannot end on unverified claims.");
+    // Native hook configs written by `forge install --hooks` for Cursor, Codex and Gemini CLI.
+    const nativeText = (await Promise.all([".cursor/hooks.json", ".codex/hooks.json", ".gemini/settings.json"].map(file => readText(path.join(root, file))))).map(text => text ?? "").join("\n");
+    const preTool = /hook pre-tool/.test(settingsText) || /hook --harness \w+ (?:beforeShellExecution|PreToolUse|BeforeTool)\b/.test(nativeText);
+    const stopGate = /hook stop/.test(settingsText) || /hook --harness \w+ (?:stop|Stop|AfterAgent)\b/.test(nativeText);
+    const secretReads = /Read\(\.\/\.env\)/.test(settingsText) || /hook --harness \w+ (?:beforeReadFile|BeforeTool)\b/.test(nativeText);
+    const guardedIn = [settingsText && /hook pre-tool/.test(settingsText) ? "Claude Code" : "", ...[["Cursor", /--harness cursor/], ["Codex", /--harness codex/], ["Gemini CLI", /--harness gemini/]].filter(([, re]) => (re as RegExp).test(nativeText)).map(([name]) => name as string)].filter(Boolean);
+    if (c.check(Boolean(doctor?.hooks) || preTool, 4, guardedIn.length ? `FORGE runtime hooks installed (${guardedIn.join(", ")})` : "FORGE runtime hooks installed", "Enable runtime guards: `forge install --hooks` (Claude Code, Cursor, Codex and Gemini CLI: blocks destructive commands, requires verification, denies .env reads).")) {
+      c.check(preTool, 2, "pre-tool guard blocks destructive commands", "Add the pre-tool guard hook (`forge install --hooks`).");
+      c.check(stopGate, 2, "stop hook requires verification evidence", "Add the stop hook so sessions cannot end on unverified claims.");
     }
-    c.check(/Read\(\.\/\.env\)/.test(settingsText), 2, "agents are denied reading .env files", "Deny secret reads in .claude/settings.json (`forge install --hooks` adds them).");
+    c.check(secretReads, 2, "agents are denied reading .env files", "Deny secret reads (`forge install --hooks` adds them for Claude Code, and Guard covers file reads in Cursor and Gemini CLI).");
     categories.push(c.done());
   }
 

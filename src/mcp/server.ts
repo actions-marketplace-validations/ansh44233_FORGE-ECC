@@ -14,6 +14,10 @@ import { loadAgentRegistry } from "../core/agent-registry.js";
 import { createReviewPlan } from "../core/review-planner.js";
 import { addProjectMemory, latestHandoff, PROJECT_MEMORY_KINDS, searchMemory } from "../core/project-memory.js";
 import { runShield } from "../core/forge-shield.js";
+import { checkGuard } from "../core/guard-report.js";
+import { consult } from "../core/consult.js";
+import { analyzeContext } from "../core/context-budget.js";
+import { detectProjectLanguages } from "../core/harness-catalog.js";
 
 
 const WORKSPACE_ROOT = await realpath(process.env.FORGE_WORKSPACE ?? process.cwd());
@@ -262,6 +266,58 @@ server.registerTool(
     try {
       const root = await resolveWorkspace(projectPath);
       return result(await auditReadOnlyMcpTool("forge_shield_scan", () => runShield(root)));
+    } catch (error) { return failure(error); }
+  }
+);
+
+server.registerTool(
+  "forge_guard_check",
+  {
+    title: "Check a command or file with FORGE Guard",
+    description: "Ask FORGE Guard, before acting, whether a shell command or a file read/write would be allowed, asked about or denied under this project's policy (.forge/harness-hooks.json). Read-only; nothing is executed.",
+    inputSchema: z.object({
+      command: z.string().min(1).max(4000).optional(),
+      file: z.string().min(1).max(1000).optional(),
+      write: z.boolean().optional(),
+      projectPath: z.string().optional()
+    })
+  },
+  async ({ command, file, write, projectPath }) => {
+    try {
+      if (!command && !file) throw new Error("Give a command or a file.");
+      const root = await resolveWorkspace(projectPath);
+      return result(await auditReadOnlyMcpTool("forge_guard_check", () => checkGuard(root, command ? { command } : { file: file as string, write: Boolean(write) })));
+    } catch (error) { return failure(error); }
+  }
+);
+
+server.registerTool(
+  "forge_consult",
+  {
+    title: "Find FORGE components for a task",
+    description: "Find the FORGE agents, skills, commands, rules and MCP servers that fit a task, ranked for the project's stack, with the command that installs them. Read-only; deterministic keyword ranking.",
+    inputSchema: z.object({ task: z.string().min(2).max(500), limit: z.number().int().min(1).max(30).optional(), projectPath: z.string().optional() })
+  },
+  async ({ task, limit, projectPath }) => {
+    try {
+      const root = await resolveWorkspace(projectPath);
+      const languages = await detectProjectLanguages(root).catch(() => [] as string[]);
+      return result(await auditReadOnlyMcpTool("forge_consult", () => consult(task, { limit: limit ?? 10, languages })));
+    } catch (error) { return failure(error); }
+  }
+);
+
+server.registerTool(
+  "forge_context_budget",
+  {
+    title: "Measure the context budget",
+    description: "Estimate what each agent tool (Claude Code, Codex, Cursor, Gemini CLI, Copilot) loads before the first prompt in this project, file by file, with findings and estimated token savings. Read-only.",
+    inputSchema: z.object({ projectPath: z.string().optional() })
+  },
+  async ({ projectPath }) => {
+    try {
+      const root = await resolveWorkspace(projectPath);
+      return result(await auditReadOnlyMcpTool("forge_context_budget", () => analyzeContext(root)));
     } catch (error) { return failure(error); }
   }
 );

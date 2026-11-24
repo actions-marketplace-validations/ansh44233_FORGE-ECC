@@ -14,7 +14,7 @@ import { buildRepoOverview, parseRepoFullName, runDashboardAction, type Dashboar
 
 export const config = { api: { bodyParser: false } };
 
-const FORGE_VERSION = "3.0.0";
+const FORGE_VERSION = "4.0.0";
 const ALLOWED_ORIGIN = "https://forge-ecc.vercel.app";
 
 async function readJson(req: VercelRequest): Promise<unknown> {

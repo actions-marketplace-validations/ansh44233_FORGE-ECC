@@ -9,6 +9,8 @@ import type { GitHubClient } from "./github-client.js";
 import { HARNESS_CAPABILITIES, type CapabilitySupport } from "../core/harness-capabilities.js";
 import type { DoctorReport } from "../core/harness-installer.js";
 import { buildScorecard, type Scorecard } from "../core/harness-scorecard.js";
+import { analyzeContext, type ContextReport } from "../core/context-budget.js";
+import { mcpMatrix, type McpMatrixRow } from "../core/mcp-sync.js";
 
 /**
  * Data for the hosted FORGE dashboard (forge-ecc.vercel.app/app).
@@ -30,12 +32,50 @@ export interface RepoOverview {
   instincts: { committed: boolean; items: InstinctCard[] };
   loops: LoopCard[];
   harnesses: HarnessCard[];
+  /** Context budget per harness, from committed instruction, rule, skill and MCP files. */
+  context?: ContextCard;
+  /** MCP servers per harness config committed to the repo. */
+  mcp?: McpMatrixRow[];
+}
+
+export interface ContextCard { grade: ContextReport["grade"]; worst: number; harnesses: Array<{ harness: string; tokens: number; mcpServers: number; items: number; top: Array<{ file: string; tokens: number }> }>; findings: ContextReport["findings"]; partial: boolean }
+
+/** Files that make up what agents load at session start (fetched for the Context tab). */
+const CONTEXT_FILE = /^(?:CLAUDE\.md|\.claude\/CLAUDE\.md|AGENTS(?:\.override)?\.md|GEMINI\.md|\.github\/copilot-instructions\.md|\.cursorrules|\.mcp\.json|\.cursor\/mcp\.json|\.codex\/config\.toml|\.gemini\/settings\.json|\.vscode\/mcp\.json|opencode\.json|\.kiro\/settings\/mcp\.json|\.claude\/rules\/.+\.md|\.cursor\/rules\/.+\.mdc?|\.claude\/(?:agents|commands)\/.+\.md|\.claude\/skills\/[^/]+\/SKILL\.md|\.agents\/skills\/[^/]+\/SKILL\.md)$/;
+const CONTEXT_PRIORITY = (file: string) => /^(?:CLAUDE|AGENTS|GEMINI)|copilot-instructions|cursorrules|mcp|config\.toml|settings\.json|opencode/.test(file) ? 0 : /rules\//.test(file) ? 1 : 2;
+const MAX_CONTEXT_FILES = 120;
+
+export async function remoteContext(client: GitHubClient, owner: string, repo: string, ref: string, entries: TreeEntry[]): Promise<{ context: ContextCard; mcp: McpMatrixRow[] }> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "forge-context-"));
+  try {
+    const candidates = entries.filter(e => e.type === "blob" && (e.size ?? 0) <= 256 * 1024 && CONTEXT_FILE.test(e.path)).sort((a, b) => CONTEXT_PRIORITY(a.path) - CONTEXT_PRIORITY(b.path) || a.path.localeCompare(b.path));
+    const chosen = candidates.slice(0, MAX_CONTEXT_FILES);
+    const texts = await Promise.all(chosen.map(async e => [e.path, await client.getFileText(owner, repo, e.path, ref).catch(() => undefined)] as const));
+    for (const [file, body] of texts) {
+      if (typeof body !== "string") continue;
+      const target = path.join(root, ...file.split("/"));
+      if (!target.startsWith(root + path.sep)) continue;
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, body, "utf8");
+    }
+    const report = await analyzeContext(root);
+    const context: ContextCard = {
+      grade: report.grade,
+      worst: report.worst,
+      harnesses: report.harnesses.filter(h => h.tokens > 0 || h.mcpServers > 0).map(h => ({ harness: h.harness, tokens: h.tokens, mcpServers: h.mcpServers, items: h.items.length, top: [...h.items].sort((a, b) => b.tokens - a.tokens).slice(0, 5).map(i => ({ file: i.file, tokens: i.tokens })) })),
+      findings: report.findings.slice(0, 12),
+      partial: candidates.length > chosen.length,
+    };
+    return { context, mcp: await mcpMatrix(root) };
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 }
 
 export interface MemoryCard { id: string; kind: string; content: string; source?: string; evidence: string[]; tags: string[]; updatedAt: string }
 export interface InstinctCard { id: string; trigger: string; action: string; status: string; confidence: number; source: string; domain: string; occurrences: number }
 export interface LoopCard { id: string; status: string; goal: string; agent: string; checks: string[]; iterations: number; lastChecks: Array<{ command: string; passed: boolean }>; integrity: string[]; createdAt: string; finishedAt?: string; reason: string }
-export interface HarnessCard { target: string; name: string; detected: boolean; installed: boolean; capabilities: Record<string, CapabilitySupport> }
+export interface HarnessCard { target: string; name: string; detected: boolean; installed: boolean; guarded: boolean; capabilities: Record<string, CapabilitySupport> }
 
 type TreeEntry = { path: string; type: string; sha?: string; size?: number };
 
@@ -52,12 +92,13 @@ const HARNESS_MARKERS: Record<string, RegExp> = {
   zed: /^(?:\.zed\/|\.rules$)/,
 };
 
-export function harnessCoverage(paths: string[], installedTargets: string[]): HarnessCard[] {
+export function harnessCoverage(paths: string[], installedTargets: string[], hookTargets: string[] = []): HarnessCard[] {
   return HARNESS_CAPABILITIES.map(cap => ({
     target: cap.target,
     name: cap.displayName,
     detected: paths.some(p => HARNESS_MARKERS[cap.target]?.test(p) ?? false),
     installed: installedTargets.includes(cap.target),
+    guarded: hookTargets.includes(cap.target),
     capabilities: { ...cap.capabilities },
   }));
 }
@@ -118,7 +159,7 @@ export function doctorFromRemote(setup: RemoteDoctor, forgeVersion: string): Doc
     installed: setup.installed,
     healthy: setup.healthy,
     currentVersion: forgeVersion,
-    ...(setup.state ? { forgeVersion: setup.state.forgeVersion, profile: setup.state.profile, targets: setup.state.targets, ...(setup.state.languages ? { languages: setup.state.languages } : {}), hooks: Boolean(setup.state.hooks) } : {}),
+    ...(setup.state ? { forgeVersion: setup.state.forgeVersion, profile: setup.state.profile, targets: setup.state.targets, ...(setup.state.languages ? { languages: setup.state.languages } : {}), hooks: Boolean(setup.state.hooks), ...(setup.state.hookTargets ? { hookTargets: setup.state.hookTargets as NonNullable<DoctorReport["hookTargets"]> } : {}) } : {}),
     entries: [],
     summary: { ok: 0, missing: setup.missing.length, modified: 0, outdated: setup.outdated.length },
     recommendations: [],
@@ -167,7 +208,10 @@ export async function buildRepoOverview(context: AppContext, owner: string, repo
     Promise.all(loopFiles.map(read)),
   ]);
   const now = context.now ?? (() => new Date());
-  const scorecard = await remoteScorecard(client, owner, repo, ref, data.entries, doctorFromRemote(setup, context.forgeVersion), shield, now).catch(() => undefined);
+  const [scorecard, contextBudget] = await Promise.all([
+    remoteScorecard(client, owner, repo, ref, data.entries, doctorFromRemote(setup, context.forgeVersion), shield, now).catch(() => undefined),
+    remoteContext(client, owner, repo, ref, data.entries).catch(() => undefined),
+  ]);
   const scoredPulls = await Promise.all(pulls.slice(0, 6).map(async pull => {
     const risk = assessPullRequestRisk(await client.listPullFiles(owner, repo, pull.number, 1).catch(() => []));
     return { number: pull.number, title: pull.title, url: pull.html_url, author: pull.user?.login ?? "", draft: Boolean(pull.draft), risk: { score: risk.score, level: risk.level, reasons: risk.reasons.slice(0, 5), stats: risk.stats, suggestedReviewers: risk.suggestedReviewers } };
@@ -184,7 +228,8 @@ export async function buildRepoOverview(context: AppContext, owner: string, repo
     memory: { committed: blobPaths.has(".forge/memory.json"), entries: parseMemoryCards(memoryRaw) },
     instincts: { committed: blobPaths.has(".forge/instincts.json"), items: parseInstinctCards(instinctsRaw) },
     loops: loopRaws.map(parseLoopCard).filter((l): l is LoopCard => Boolean(l)),
-    harnesses: harnessCoverage([...blobPaths], setup.state?.targets ?? []),
+    harnesses: harnessCoverage([...blobPaths], setup.state?.targets ?? [], setup.state?.hookTargets ?? []),
+    ...(contextBudget ? { context: contextBudget.context, mcp: contextBudget.mcp } : {}),
   };
 }
 

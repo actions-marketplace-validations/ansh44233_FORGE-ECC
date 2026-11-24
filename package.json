@@ -1,6 +1,6 @@
 {
   "name": "forge-engineering-workbench",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "private": false,
   "description": "FORGE: the verified engineering harness for AI coding agents — universal installer, Shield security scanner, runtime guard hooks, layered memory, GitHub App and codebase intelligence.",
   "type": "module",

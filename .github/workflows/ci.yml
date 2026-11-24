@@ -2,9 +2,9 @@ name: FORGE CI
 
 on:
   push:
-    branches: [main, forge-v2, v3]
+    branches: [main, forge-v2, v3, v4]
   pull_request:
-    branches: [main, forge-v2, v3]
+    branches: [main, forge-v2, v3, v4]
 
 concurrency:
   group: ci-${{ github.ref }}

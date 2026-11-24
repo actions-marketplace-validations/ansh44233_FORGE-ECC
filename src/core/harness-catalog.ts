@@ -218,6 +218,8 @@ export async function detectProjectLanguages(projectRoot: string): Promise<strin
     ["php", ["composer.json"]],
     ["ruby", ["Gemfile"]],
     ["swift", ["Package.swift"]],
+    ["dart", ["pubspec.yaml"]],
+    ["kotlin", ["build.gradle.kts", "settings.gradle.kts"]],
   ];
   const found: string[] = [];
   for (const [language, files] of markers) {
@@ -243,6 +245,7 @@ export async function detectProjectLanguages(projectRoot: string): Promise<strin
       const pkg = JSON.parse(await readFile(path.join(projectRoot, "package.json"), "utf8")) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
       const deps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
       if ("react" in deps || "next" in deps || "react-native" in deps) found.push("react");
+      if ("vue" in deps || "nuxt" in deps) found.push("vue");
     }
   } catch {
     // No or invalid package.json.

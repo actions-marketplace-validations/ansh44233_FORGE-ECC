@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0b0a0e">
 <link rel="icon" type="image/svg+xml" href="/forge-mark.svg">
 <meta property="og:title" content="FORGE — the verified layer for your coding agents">
-<meta property="og:description" content="Agents, skills, rules and guard hooks for Claude Code, Cursor, Codex, OpenCode, Gemini, Copilot, Windsurf, Kiro, Cline and Zed — plus Shield security scans and verified pull requests.">
+<meta property="og:description" content="One Guard policy enforced in Claude Code, Cursor, Codex and Gemini CLI, plus agents, skills and rules for 10 coding tools, agent races, MCP sync, Shield scans and verified pull requests.">
 <meta name="description" content="FORGE is an open-source agent harness: install specialist agents, skills, commands and rules into your coding tools, guard risky actions, scan agent configuration with Shield and check every pull request.">
 <title>FORGE | The verified layer for your coding agents</title>
 <style>
@@ -43,6 +43,11 @@ code,.mono{font-family:var(--mono)}
 .hero-art{position:absolute;inset:0 0 0 34%;z-index:-1;background:url('/forge-background.png') center/cover no-repeat;opacity:.9;-webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 38%,#000 85%,transparent 100%),linear-gradient(180deg,#000 70%,transparent 100%);-webkit-mask-composite:source-in;mask-image:linear-gradient(90deg,transparent 0%,#000 38%,#000 85%,transparent 100%);filter:saturate(.95)}
 .hero:after{content:"";position:absolute;inset:auto 0 0 0;height:200px;background:linear-gradient(180deg,transparent,var(--bg));z-index:-1}
 .eyebrow{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.02em;margin:0 0 14px}
+.announce{max-width:100%;line-height:1.35;display:inline-flex;align-items:center;gap:10px;padding:5px 14px 5px 5px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.03);text-decoration:none;color:var(--muted);transition:border-color .15s,color .15s}
+.announce:hover{border-color:var(--accent);color:var(--ink)}
+.announce b{white-space:nowrap;flex:none;font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:var(--accent);color:#1a1210}
+.announce span:last-child{color:var(--accent)}
+@media (max-width:560px){.announce{border-radius:16px;font-size:12px}.announce .more-new{display:none}}
 .hero h1{font-size:clamp(40px,6vw,72px);line-height:1.02;letter-spacing:-.035em;font-weight:750;margin:0 0 22px;max-width:920px}
 .hero h1 span{color:var(--accent)}
 .lead{font-size:19px;color:var(--muted);max-width:560px;margin:0 0 28px}
@@ -264,6 +269,8 @@ footer{border-top:1px solid var(--line);padding:46px 0 60px;margin-top:40px;font
     <a class="brand" href="/" aria-label="FORGE home"><img src="/forge-mark.svg" alt=""> FORGE</a>
     <nav class="links" aria-label="Primary">
       <a href="#github-app">GitHub App</a>
+      <a href="#guard">Guard</a>
+      <a href="#race">Race &amp; MCP</a>
       <a href="#loop">Learn &amp; loop</a>
       <a href="#shield">Shield</a>
       <a href="#platforms">Platforms</a>
@@ -283,15 +290,15 @@ footer{border-top:1px solid var(--line);padding:46px 0 60px;margin-top:40px;font
 <section class="hero">
   <div class="hero-art" aria-hidden="true"></div>
   <div class="wrap">
-    <p class="eyebrow">FORGE 3.0 · open-source agent harness</p>
+    <p class="eyebrow"><a class="announce" href="#guard"><b>New in 4.0</b> <em style="font-style:normal">Guard in Claude Code, Cursor, Codex &amp; Gemini<i class="more-new" style="font-style:normal"> · agent race · MCP sync</i></em> <span>→</span></a></p>
     <h1>The verified layer<br><span>for your coding agents.</span></h1>
-    <p class="lead">Agents, skills, rules and guard hooks for the tools you already use — with Shield security scans and a check on every pull request.</p>
+    <p class="lead">Guard hooks enforced in Claude Code, Cursor, Codex and Gemini CLI. Agents, skills and rules for 10 coding tools. Agent races your checks decide, one MCP config everywhere, and a check on every pull request.</p>
     <div class="cta">
       <a class="btn primary" href="/api/github/install">Install GitHub App ↗</a>
       <a class="btn" href="/app/">Open the dashboard →</a>
     </div>
     <p class="cmd-label">Install the CLI · Node.js 22+</p>
-    <div class="cmd"><span class="p">$</span><code id="install-cmd">npm install -g https://github.com/ansh44233/FORGE-ECC/releases/download/v3.0.0/forge-engineering-workbench-3.0.0.tgz &amp;&amp; forge install . --hooks</code><button class="copy" id="copy" type="button">Copy</button></div>
+    <div class="cmd"><span class="p">$</span><code id="install-cmd">npm install -g https://github.com/ansh44233/FORGE-ECC/releases/download/v4.0.0/forge-engineering-workbench-4.0.0.tgz &amp;&amp; forge install . --hooks</code><button class="copy" id="copy" type="button">Copy</button></div>
     <div class="tools">
       <p>Install FORGE in your coding tool</p>
       <div class="tiles">
@@ -316,14 +323,14 @@ footer{border-top:1px solid var(--line);padding:46px 0 60px;margin-top:40px;font
         <div><b data-live="release">—</b><a href="https://github.com/ansh44233/FORGE-ECC/releases/latest">Latest release* ↗</a></div>
       </div>
       <div class="mrow small">
-        <div><b>41</b><span>specialist agents</span></div>
-        <div><b>51</b><span>skills, matched to your stack</span></div>
-        <div><b>29</b><span>slash commands</span></div>
+        <div><b>49</b><span>specialist agents</span></div>
+        <div><b>76</b><span>skills, matched to your stack</span></div>
+        <div><b>34</b><span>slash commands</span></div>
         <div><b>60</b><span>Shield rules</span></div>
         <div><b>10</b><span>harnesses, one install</span></div>
       </div>
       <details class="methods" id="install">
-        <summary><span>Every installation method</span><em>* live from the GitHub API · catalog counts from the v3 repository</em></summary>
+        <summary><span>Every installation method</span><em>* live from the GitHub API · catalog counts from FORGE 4.0</em></summary>
         <div class="mtabs" role="tablist">
           <button role="tab" class="on" data-tab="cli">CLI</button>
           <button role="tab" data-tab="harness">Per harness</button>
@@ -336,7 +343,7 @@ footer{border-top:1px solid var(--line);padding:46px 0 60px;margin-top:40px;font
         <div class="mpanel on" data-panel="cli">
           <p>Install the released package, then add FORGE to a project. Requires Node.js 22+ and Git.</p>
 <pre><span class="c"># 1. install the CLI</span>
-npm install -g https://github.com/ansh44233/FORGE-ECC/releases/download/v3.0.0/forge-engineering-workbench-3.0.0.tgz
+npm install -g https://github.com/ansh44233/FORGE-ECC/releases/download/v4.0.0/forge-engineering-workbench-4.0.0.tgz
 <span class="c"># 2. preview, then install with runtime hooks and the status line</span>
 cd your-project
 forge install . --dry-run
@@ -348,10 +355,10 @@ forge scorecard . &amp;&amp; forge shield .</pre>
           <p>The first five tools install by default. The others are added when FORGE finds them in the repo, or on request with <code>--target</code>.</p>
           <table>
             <tr id="install-claude-code"><td>Claude Code</td><td><code>forge install . --target claude --hooks --statusline</code></td><td>agents, skills, <code>/forge:*</code> commands, rules, 7 hooks</td></tr>
-            <tr id="install-codex"><td>Codex</td><td><code>forge install . --target codex</code></td><td><code>AGENTS.md</code> block, <code>.agents/skills</code></td></tr>
-            <tr id="install-cursor"><td>Cursor</td><td><code>forge install . --target cursor</code></td><td><code>.cursor/rules/*.mdc</code>, commands</td></tr>
+            <tr id="install-codex"><td>Codex</td><td><code>forge install . --target codex --hooks</code></td><td><code>AGENTS.md</code> block, <code>.agents/skills</code>, 7 hooks</td></tr>
+            <tr id="install-cursor"><td>Cursor</td><td><code>forge install . --target cursor --hooks</code></td><td><code>.cursor/rules/*.mdc</code>, commands, 6 hooks</td></tr>
             <tr id="install-opencode"><td>OpenCode</td><td><code>forge install . --target opencode</code></td><td>agents, commands, <code>AGENTS.md</code></td></tr>
-            <tr id="install-gemini-cli"><td>Gemini CLI</td><td><code>forge install . --target gemini</code></td><td>TOML commands, <code>GEMINI.md</code></td></tr>
+            <tr id="install-gemini-cli"><td>Gemini CLI</td><td><code>forge install . --target gemini --hooks</code></td><td>TOML commands, <code>GEMINI.md</code>, 7 hooks</td></tr>
             <tr id="install-copilot"><td>Copilot</td><td><code>forge install . --target copilot</code></td><td>instructions, prompt files, custom agents</td></tr>
             <tr id="install-windsurf"><td>Windsurf</td><td><code>forge install . --target windsurf</code></td><td>rules with triggers, workflows</td></tr>
             <tr id="install-kiro"><td>Kiro</td><td><code>forge install . --target kiro</code></td><td>steering files</td></tr>
@@ -370,7 +377,7 @@ forge scorecard . &amp;&amp; forge shield .</pre>
         </div>
         <div class="mpanel" data-panel="ci">
           <p>Fail CI on risky agent configuration and send findings to GitHub code scanning.</p>
-<pre>- uses: ansh44233/FORGE-ECC@v3.0.0
+<pre>- uses: ansh44233/FORGE-ECC@v4.0.0
   with:
     operation: shield
     fail-on: high
@@ -381,7 +388,7 @@ forge scorecard . &amp;&amp; forge shield .</pre>
         </div>
         <div class="mpanel" data-panel="windows">
           <p>PowerShell, with Node.js 22+ installed.</p>
-<pre>npm install --global https://github.com/ansh44233/FORGE-ECC/releases/download/v3.0.0/forge-engineering-workbench-3.0.0.tgz
+<pre>npm install --global https://github.com/ansh44233/FORGE-ECC/releases/download/v4.0.0/forge-engineering-workbench-4.0.0.tgz
 cd C:\Users\you\Projects\my-project
 forge install . --hooks --statusline
 forge scorecard .</pre>
@@ -413,7 +420,7 @@ forge uninstall .       <span class="c"># remove only what FORGE added</span></p
       <div class="reveal">
         <div class="frame">
           <div class="frame-bar"><i></i><i></i><i></i><span>forge-ecc.vercel.app/app</span></div>
-          <img src="/assets/dashboard-preview.jpg" alt="FORGE dashboard showing a Shield score, setup health, pull request risk and project profile" loading="lazy" width="1440" height="860">
+          <img src="/assets/dashboard-preview.jpg" alt="FORGE Control Center: readiness, Shield, Guard, context budget, MCP servers, next actions and pull request risk" loading="lazy" width="1440" height="1250">
         </div>
         <p class="caption">FORGE Control Center · readiness, Shield, memory, instincts and loop receipts · sample data</p>
       </div>
@@ -446,29 +453,150 @@ forge uninstall .       <span class="c"># remove only what FORGE added</span></p
         <code class="id">forge-code-reviewer</code>
         <h3>Review before you merge.</h3>
         <p class="muted">Findings ranked blocker to nit, each with file, line, failure scenario and a fix — and a clear verdict at the end.</p>
-        <a class="more" href="https://github.com/ansh44233/FORGE-ECC/tree/main/catalog/agents">See all 41 agents →</a>
+        <a class="more" href="https://github.com/ansh44233/FORGE-ECC/tree/main/catalog/agents">See all 49 agents →</a>
       </div>
       <div class="col reveal">
         <div class="tag">Skill</div>
         <code class="id">forge-verification-loop</code>
         <h3>No claims without evidence.</h3>
         <p class="muted">Run the narrowest check, widen to typecheck, tests and build, then report exact commands and real results.</p>
-        <a class="more" href="https://github.com/ansh44233/FORGE-ECC/tree/main/catalog/skills">See all 51 skills →</a>
+        <a class="more" href="https://github.com/ansh44233/FORGE-ECC/tree/main/catalog/skills">See all 76 skills →</a>
       </div>
       <div class="col reveal">
         <div class="tag">Workflow</div>
         <code class="id">/learn · forge-project</code>
         <h3>A guide written for your repo.</h3>
         <p class="muted"><code>forge analyze</code> learns your verify commands and conventions; <code>/learn</code> keeps verified lessons for the next session.</p>
-        <a class="more" href="https://github.com/ansh44233/FORGE-ECC/tree/main/catalog/commands">See all 28 commands →</a>
+        <a class="more" href="https://github.com/ansh44233/FORGE-ECC/tree/main/catalog/commands">See all 34 commands →</a>
       </div>
+    </div>
+  </div>
+</section>
+
+<section class="block alt" id="guard">
+  <div class="wrap">
+    <p class="label reveal">New in 4.0</p>
+    <h2 class="reveal">Guard everywhere. <span>One policy, four agents.</span></h2>
+    <p class="muted reveal" style="max-width:720px">Rules in a Markdown file are suggestions. FORGE 4.0 enforces the same Guard policy, verification gate, prompt secret guard and session memory as native hooks inside Claude Code, Cursor, Codex and Gemini CLI. Every block is logged with the agent that tried it.</p>
+    <div class="cards3">
+      <article class="card reveal">
+        <div class="term" aria-label="Cursor blocking a destructive command">
+<div class="c"># Cursor · .cursor/hooks.json</div>
+<div><span class="a">agent</span> rm -rf ~/</div>
+<div><span class="b">✗ deny</span> GUARD-RM-ROOT</div>
+<div class="c">beforeShellExecution → forge hook</div>
+<div><span class="a">agent</span> read .env</div>
+<div><span class="b">✗ deny</span> GUARD-SECRET-READ</div>
+<div><span class="a">stop</span> <span class="w">typecheck failed</span> → sent back</div>
+        </div>
+        <div class="body">
+          <p class="kicker">Cursor</p>
+          <h3>Shell, file reads and stop.</h3>
+          <p class="muted">Six Cursor events. Permission hooks always answer with valid JSON, so a FORGE failure can never lock your editor.</p>
+        </div>
+      </article>
+      <article class="card reveal">
+        <div class="term" aria-label="Codex blocking an apply_patch to git internals">
+<div class="c"># Codex · .codex/hooks.json</div>
+<div><span class="a">apply_patch</span></div>
+<div>&nbsp;&nbsp;src/api.ts&nbsp;&nbsp;&nbsp;&nbsp;<span class="ok">✓</span></div>
+<div>&nbsp;&nbsp;.git/config&nbsp;&nbsp;&nbsp;<span class="b">✗ GUARD-GIT-INTERNALS</span></div>
+<div><span class="b">✗ deny</span> whole patch</div>
+<div><span class="a">prompt</span> "use ghp_…"</div>
+<div><span class="b">✗ blocked</span> live credential</div>
+        </div>
+        <div class="body">
+          <p class="kicker">Codex</p>
+          <h3>Every file in every patch.</h3>
+          <p class="muted">FORGE reads each <code>apply_patch</code> header and checks every file it touches, plus Bash, prompts, Stop verification and compaction handoffs.</p>
+        </div>
+      </article>
+      <article class="card reveal">
+        <div class="term" aria-label="forge guard log across harnesses">
+<div><span class="a">$</span> forge guard log</div>
+<div>Guard · <b>3</b> interventions</div>
+<div class="c">claude 1 · codex 1 · cursor 1</div>
+<div>cursor&nbsp; <span class="b">deny</span> GUARD-RM-ROOT</div>
+<div>codex&nbsp;&nbsp; <span class="w">ask</span>&nbsp; GUARD-SECRET-READ</div>
+<div>claude&nbsp; <span class="w">ask</span>&nbsp; GUARD-FORCE-PUSH</div>
+<div><span class="a">$</span> forge guard check "curl … | sh"</div>
+<div><span class="b">✗ deny</span> <span class="c">exit 2</span></div>
+        </div>
+        <div class="body">
+          <p class="kicker">forge guard</p>
+          <h3>Test the policy before agents hit it.</h3>
+          <p class="muted"><code>check</code> dry-runs a command or path against your rules and fails CI on deny. <code>log</code> and <code>status</code> show what was blocked, by which agent, and where Guard is live.</p>
+          <a class="more" href="https://github.com/ansh44233/FORGE-ECC#runtime-hooks-guard-and-memory">Guard everywhere →</a>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="race">
+  <div class="wrap">
+    <p class="label reveal">Also new in 4.0</p>
+    <h2 class="reveal">Race the agents. <span>Sync the tools. Measure the context.</span></h2>
+    <div class="cards3">
+      <article class="card reveal">
+        <div class="term" aria-label="forge race output">
+<div><span class="a">$</span> forge race --agents claude,codex,gemini</div>
+<div>1  codex&nbsp;  <span class="ok">✓ passed</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; +6 -2</div>
+<div>2  claude  <span class="ok">✓ passed</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; +19 -4</div>
+<div>3  gemini  <span class="w">⚠ needs-review</span> +2 -31</div>
+<div class="c">&nbsp;&nbsp;&nbsp;deleted-test: tests/date.test.ts</div>
+<div>Winner: <b>codex</b>, verified by FORGE</div>
+<div><span class="a">$</span> forge race pick</div>
+        </div>
+        <div class="body">
+          <p class="kicker">forge race</p>
+          <h3>Your checks pick the best agent.</h3>
+          <p class="muted">The same task for every agent, each in its own git worktree. FORGE runs your checks and the integrity gate, ranks the results and merges the winner when you say so.</p>
+          <a class="more" href="https://github.com/ansh44233/FORGE-ECC#agent-race">Agent race →</a>
+        </div>
+      </article>
+      <article class="card reveal">
+        <div class="term" aria-label="forge mcp sync output">
+<div><span class="a">$</span> forge mcp sync</div>
+<div class="c">from .mcp.json →</div>
+<div><span class="ok">add</span>&nbsp; context7&nbsp;&nbsp; .cursor/mcp.json</div>
+<div><span class="ok">add</span>&nbsp; context7&nbsp;&nbsp; .codex/config.toml</div>
+<div><span class="ok">add</span>&nbsp; github&nbsp;&nbsp;&nbsp;&nbsp; .gemini/settings.json</div>
+<div><span class="ok">add</span>&nbsp; github&nbsp;&nbsp;&nbsp;&nbsp; .vscode/mcp.json</div>
+<div><span class="b">not copied</span> leaky: literal secret</div>
+        </div>
+        <div class="body">
+          <p class="kicker">forge mcp</p>
+          <h3>One MCP config, seven tools.</h3>
+          <p class="muted">Pinned servers written in each tool's own format and env syntax, from Claude Code to Codex TOML. Secrets stay references; FORGE never copies a value.</p>
+          <a class="more" href="https://github.com/ansh44233/FORGE-ECC#mcp-sync">MCP sync →</a>
+        </div>
+      </article>
+      <article class="card reveal">
+        <div class="term" aria-label="forge context output">
+<div><span class="a">$</span> forge context</div>
+<div>grade <b>C</b> · heaviest ≈ <b>11.8k</b> tokens</div>
+<div>codex&nbsp; <span class="w">███████████████</span> 11.8k</div>
+<div>claude <span class="ok">████████</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 6.2k</div>
+<div><span class="b">[high]</span> AGENTS.md ≈ 9.9k tokens</div>
+<div class="c">→ move how-tos into skills</div>
+<div><span class="a">$</span> forge consult "slow queries"</div>
+<div>skill:postgres-queries …</div>
+        </div>
+        <div class="body">
+          <p class="kicker">forge context · consult</p>
+          <h3>Pay for less context.</h3>
+          <p class="muted">See what every tool loads before your first prompt, file by file, with the fix for each finding. <code>forge consult</code> finds the components for a task, ranked for your stack.</p>
+          <a class="more" href="https://github.com/ansh44233/FORGE-ECC#context-budget">Context budget →</a>
+        </div>
+      </article>
     </div>
   </div>
 </section>
 
 <section class="block alt" id="loop">
   <div class="wrap">
-    <p class="label reveal">New in 3.0</p>
+    <p class="label reveal">Since 3.0</p>
     <h2 class="reveal">Learn, loop <span>and prove.</span></h2>
     <div class="cards3">
       <article class="card reveal">
@@ -557,7 +685,7 @@ forge uninstall .       <span class="c"># remove only what FORGE added</span></p
       </article>
       <article class="card reveal">
         <div class="term" aria-label="Example FORGE Guard decisions">
-<div class="c"># FORGE Guard · Claude Code PreToolUse</div>
+<div class="c"># FORGE Guard · Claude Code, Cursor, Codex, Gemini</div>
 <div><span class="a">Bash</span> rm -rf ~/</div>
 <div>&nbsp;&nbsp;<span class="chip b">deny</span>Recursive force-delete of home directory</div>
 <div><span class="a">Bash</span> git push --force origin main</div>
@@ -617,10 +745,10 @@ forge_memory_search · forge_memory_add</div>
     <h2 class="reveal">One install. <span>Every harness.</span></h2>
     <div class="platforms">
       <div class="platform reveal"><div class="top"><i><img data-logo src="/assets/logos/claude-code.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="M7.5 10l3 2.5-3 2.5"/><path d="M12.5 15.5h4"/></svg></span></i><b>Claude Code</b><span class="type">Native + hooks</span></div><p>Agents, skills, <code>/forge:*</code> commands, rules and Guard hooks in <code>.claude/</code></p></div>
-      <div class="platform reveal"><div class="top"><i><img data-logo src="/assets/logos/codex.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4.5c-2 0-3 1-3 3v2c0 1.3-.8 2.5-2 2.5 1.2 0 2 1.2 2 2.5v2c0 2 1 3 3 3"/><path d="M15 4.5c2 0 3 1 3 3v2c0 1.3.8 2.5 2 2.5-1.2 0-2 1.2-2 2.5v2c0 2-1 3-3 3"/></svg></span></i><b>Codex</b><span class="type">AGENTS.md + skills</span></div><p>Managed <code>AGENTS.md</code> block and skills in <code>.agents/skills/</code></p></div>
-      <div class="platform reveal"><div class="top"><i><img data-logo src="/assets/logos/cursor.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 3.5l13 7.2-5.6 1.6 3.4 6.2-2.6 1.4-3.4-6.2-4.8 3.6z"/></svg></span></i><b>Cursor</b><span class="type">Rules + commands</span></div><p>Scoped <code>.cursor/rules/*.mdc</code> and <code>.cursor/commands/</code></p></div>
+      <div class="platform reveal"><div class="top"><i><img data-logo src="/assets/logos/codex.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4.5c-2 0-3 1-3 3v2c0 1.3-.8 2.5-2 2.5 1.2 0 2 1.2 2 2.5v2c0 2 1 3 3 3"/><path d="M15 4.5c2 0 3 1 3 3v2c0 1.3.8 2.5 2 2.5-1.2 0-2 1.2-2 2.5v2c0 2-1 3-3 3"/></svg></span></i><b>Codex</b><span class="type">Skills + hooks</span></div><p>Managed <code>AGENTS.md</code> block, <code>.agents/skills/</code> and Guard hooks in <code>.codex/hooks.json</code></p></div>
+      <div class="platform reveal"><div class="top"><i><img data-logo src="/assets/logos/cursor.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 3.5l13 7.2-5.6 1.6 3.4 6.2-2.6 1.4-3.4-6.2-4.8 3.6z"/></svg></span></i><b>Cursor</b><span class="type">Rules + hooks</span></div><p>Scoped <code>.cursor/rules/*.mdc</code>, commands and Guard hooks in <code>.cursor/hooks.json</code></p></div>
       <div class="platform reveal"><div class="top"><i><img data-logo src="/assets/logos/opencode.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><path d="M13.5 4.5l-3 15"/></svg></span></i><b>OpenCode</b><span class="type">Agents + commands</span></div><p>Subagents and commands in <code>.opencode/</code> plus <code>AGENTS.md</code></p></div>
-      <div class="platform reveal"><div class="top"><i><img data-logo src="/assets/logos/gemini.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="M3 9h18"/><circle cx="6.3" cy="6.8" r=".4" fill="currentColor"/><circle cx="8.6" cy="6.8" r=".4" fill="currentColor"/><path d="M7 13.5h3.5M7 16h6"/></svg></span></i><b>Gemini CLI</b><span class="type">Commands</span></div><p>TOML commands in <code>.gemini/commands/forge/</code> and <code>GEMINI.md</code></p></div>
+      <div class="platform reveal"><div class="top"><i><img data-logo src="/assets/logos/gemini.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="M3 9h18"/><circle cx="6.3" cy="6.8" r=".4" fill="currentColor"/><circle cx="8.6" cy="6.8" r=".4" fill="currentColor"/><path d="M7 13.5h3.5M7 16h6"/></svg></span></i><b>Gemini CLI</b><span class="type">Commands + hooks</span></div><p>TOML commands, <code>GEMINI.md</code> and Guard hooks in <code>.gemini/settings.json</code></p></div>
       <div class="platform reveal"><div class="top"><i><img data-logo src="/assets/logos/github.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6.5" cy="5.5" r="2.2"/><circle cx="6.5" cy="18.5" r="2.2"/><circle cx="17.5" cy="8.5" r="2.2"/><path d="M6.5 7.7v8.6"/><path d="M17.5 10.7c0 3.5-4 3.8-9.4 5.9"/></svg></span></i><b>GitHub</b><span class="type">App + checks</span></div><p>Setup pull requests, PR risk checks, SARIF and the <code>shield</code> Action</p></div>
       <div class="platform reveal"><div class="top"><i><span class="glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="16.5" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="800" fill="currentColor">Co</text></svg></span></i><b>GitHub Copilot</b><span class="type">Native</span></div><p><code>.github/instructions</code> with <code>applyTo</code>, prompt files and custom agents</p></div>
       <div class="platform reveal"><div class="top"><i><span class="glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="16.5" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="800" fill="currentColor">W</text></svg></span></i><b>Windsurf</b><span class="type">Rules + workflows</span></div><p><code>.windsurf/rules</code> with always-on, glob and model triggers, plus workflows</p></div>
@@ -658,6 +786,9 @@ forge_memory_search · forge_memory_add</div>
           <tr><td>The agent learns something</td><td><span class="no">✕</span>Saved and trusted automatically</td><td><span class="yes">✓</span><b>Candidate until a person promotes it</b>, with evidence and confidence attached</td></tr>
           <tr><td>You install a toolkit</td><td><span class="no">✕</span>Files copied over your edits</td><td><span class="yes">✓</span><b>Every file is hashed</b>, your edits are never overwritten, and uninstall restores the project</td></tr>
           <tr><td>Someone comments on an issue</td><td><span class="no">✕</span>A CI agent may run with secrets</td><td><span class="yes">✓</span><b>Shield flags it as critical</b> unless the workflow checks who triggered it</td></tr>
+          <tr><td>Your team mixes Cursor, Codex and Claude Code</td><td><span class="no">✕</span>Rules in Markdown, enforced by nobody</td><td><span class="yes">✓</span><b>One Guard policy enforced natively in all four</b>, with one log naming the agent behind every block</td></tr>
+          <tr><td>You wonder which agent is best for your repo</td><td><span class="no">✕</span>Benchmarks on someone else's code</td><td><span class="yes">✓</span><b>forge race</b> runs them on your task and ranks them by your checks</td></tr>
+          <tr><td>Each tool needs its own MCP config</td><td><span class="no">✕</span>Copy JSON, TOML and secrets five times</td><td><span class="yes">✓</span><b>forge mcp sync</b> writes every format, pinned, with env references only</td></tr>
           <tr><td>You compare repositories</td><td><span class="no">✕</span>Vibes</td><td><span class="yes">✓</span><b>A deterministic scorecard</b> with evidence for every point, across the fleet</td></tr>
         </tbody>
       </table>
@@ -674,14 +805,14 @@ forge_memory_search · forge_memory_add</div>
         <div class="name">Open source</div>
         <div class="price">$0</div>
         <p class="muted">MIT licensed. Runs on your machine.</p>
-        <ul><li>Installer for 10 harnesses</li><li>Shield (60 rules) and Guard hooks</li><li>Memory, instincts and the verified loop</li><li>Scorecard, cost tracking and status line</li></ul>
+        <ul><li>Installer for 10 harnesses</li><li>Guard hooks in Claude Code, Cursor, Codex and Gemini</li><li>Shield (60 rules), memory, instincts and the verified loop</li><li>Agent race, MCP sync, context budget and scorecard</li></ul>
         <a class="btn" href="https://github.com/ansh44233/FORGE-ECC">Get it on GitHub ↗</a>
       </div>
       <div class="plan featured reveal">
         <div class="name">GitHub App</div>
-        <div class="price">$0 <small>during 3.0</small></div>
+        <div class="price">$0 <small>during 4.0</small></div>
         <p class="muted">Hosted checks for your repositories.</p>
-        <ul><li>Setup and repair pull requests</li><li>PR risk score and Shield annotations</li><li>Control Center: fleet, scorecard, memory, loops</li><li>Public and private repositories</li></ul>
+        <ul><li>Setup and repair pull requests</li><li>PR risk score and Shield annotations</li><li>Control Center: fleet, scorecard, context, memory, loops</li><li>Public and private repositories</li></ul>
         <a class="btn primary" href="/api/github/install">Install the GitHub App ↗</a>
       </div>
       <div class="plan reveal">
@@ -706,6 +837,8 @@ forge_memory_search · forge_memory_add</div>
       <details><summary>What does the GitHub App read?</summary><p>The file list, root manifests, commit subjects, pull request file lists and agent configuration files. It does not download or store your source code, and commands run only for collaborators with write access.</p></details>
       <details><summary>Can I use FORGE without an account?</summary><p>Yes. The CLI, installer, Shield, hooks, memory and local dashboard work entirely on your machine. The GitHub App and hosted dashboard are optional.</p></details>
       <details><summary>Does a Shield score prove my setup is safe?</summary><p>No. Shield is static analysis of known configuration locations. It helps you find and prioritize risk; it is not a certification.</p></details>
+      <details><summary>Which tools does FORGE Guard run in?</summary><p>Claude Code, Cursor, Codex and Gemini CLI, as native hooks installed by <code>forge install --hooks</code>. One policy in <code>.forge/harness-hooks.json</code> and one log (<code>forge guard log</code>) cover all four. Codex, Gemini and Cursor's file-read hook can't pause for approval, so where Claude Code would ask, FORGE blocks the action and tells the agent to get your go-ahead.</p></details>
+      <details><summary>What is an agent race?</summary><p><code>forge race</code> gives the same goal to several agents, such as Claude Code, Codex and Gemini. Each works in its own git worktree, and FORGE ranks them using only its own check runs. An agent that deletes or skips tests can't win. Your working tree changes only when you run <code>forge race pick</code>.</p></details>
       <details><summary>How do I remove FORGE?</summary><p>Run <code>forge uninstall .</code>. It removes only unmodified FORGE files and its managed blocks, and keeps anything you edited.</p></details>
     </div>
   </div>
@@ -729,7 +862,7 @@ forge_memory_search · forge_memory_add</div>
   <div class="wrap">
     <div class="foot">
       <div><a class="brand" href="/" style="display:flex"><img src="/forge-mark.svg" alt=""> FORGE</a><p style="margin-top:14px;max-width:300px">The verified layer for your coding agents. Open source, local-first, evidence by default.</p></div>
-      <div><h4>Product</h4><a href="#github-app">GitHub App</a><a href="/app/">Control Center</a><a href="#loop">Scorecard, instincts and loop</a><a href="#shield">Shield</a><a href="#platforms">Platforms</a></div>
+      <div><h4>Product</h4><a href="#github-app">GitHub App</a><a href="/app/">Control Center</a><a href="#guard">Guard everywhere</a><a href="#race">Race, MCP sync and context</a><a href="#loop">Scorecard, instincts and loop</a><a href="#shield">Shield</a><a href="#platforms">Platforms</a></div>
       <div><h4>Open source</h4><a href="https://github.com/ansh44233/FORGE-ECC">Repository</a><a href="https://github.com/ansh44233/FORGE-ECC/blob/main/CHANGELOG.md">Changelog</a><a href="https://github.com/ansh44233/FORGE-ECC/issues">Issues</a><a href="https://github.com/ansh44233/FORGE-ECC/blob/main/LICENSE">MIT License</a></div>
       <div><h4>Docs</h4><a href="https://github.com/ansh44233/FORGE-ECC#install-forge">Quick start</a><a href="https://github.com/ansh44233/FORGE-ECC/blob/main/docs/integrations/github-app.md">GitHub App</a><a href="https://github.com/ansh44233/FORGE-ECC/blob/main/docs/integrations/claude-code.md">Claude Code</a><a href="https://github.com/ansh44233/FORGE-ECC/blob/main/SECURITY.md">Security</a></div>
     </div>
