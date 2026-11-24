@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://forge-ecc.vercel.app/"><img src="https://img.shields.io/badge/Website-forge--ecc.vercel.app-E8B3A2?logo=vercel&logoColor=white" alt="Website" /></a>
+  <a href="https://forge-ecc.vercel.app/"><img src="https://img.shields.io/badge/Website-forge--ecc.vercel.app-E3B468?logo=vercel&logoColor=white" alt="Website" /></a>
   <a href="https://forge-ecc.vercel.app/api/github/install"><img src="https://img.shields.io/badge/GitHub%20App-Install%20FORGE-181717?logo=github&logoColor=white" alt="Install the FORGE GitHub App" /></a>
   <a href="https://forge-ecc.vercel.app/app/"><img src="https://img.shields.io/badge/Control%20Center-Open-1a171d?logo=githubactions&logoColor=white" alt="FORGE Control Center" /></a>
   <a href="https://github.com/forge-workbench"><img src="https://img.shields.io/badge/Org-FORGE%20WORKBENCH-c47b52?logo=github&logoColor=white" alt="FORGE WORKBENCH" /></a>
@@ -13,13 +13,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ansh44233/FORGE-ECC"><img src="https://img.shields.io/github/stars/ansh44233/FORGE-ECC?style=flat" alt="GitHub stars" /></a>
-  <a href="https://github.com/ansh44233/FORGE-ECC/forks"><img src="https://img.shields.io/github/forks/ansh44233/FORGE-ECC?style=flat" alt="GitHub forks" /></a>
-  <a href="https://github.com/ansh44233/FORGE-ECC/graphs/contributors"><img src="https://img.shields.io/github/contributors/ansh44233/FORGE-ECC?style=flat" alt="Contributors" /></a>
-  <a href="https://github.com/ansh44233/FORGE-ECC/commits/main"><img src="https://img.shields.io/github/last-commit/ansh44233/FORGE-ECC?style=flat" alt="Last commit" /></a>
-  <a href="https://github.com/ansh44233/FORGE-ECC/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/ansh44233/FORGE-ECC/ci.yml?branch=main&style=flat&label=build" alt="Build status" /></a>
-  <a href="https://github.com/ansh44233/FORGE-ECC/releases"><img src="https://img.shields.io/github/v/release/ansh44233/FORGE-ECC?style=flat&label=release" alt="Latest release" /></a>
-  <a href="https://github.com/ansh44233/FORGE-ECC/releases"><img src="https://img.shields.io/github/downloads/ansh44233/FORGE-ECC/total?style=flat&label=downloads" alt="Release downloads" /></a>
+  <a href="https://github.com/ansh44233/FORGE-ECC/actions/workflows/ci.yml"><img src="https://github.com/ansh44233/FORGE-ECC/actions/workflows/ci.yml/badge.svg?branch=main" alt="Build status" /></a>
+  <a href="https://github.com/ansh44233/FORGE-ECC/releases"><img src="docs/badges/release.svg" alt="Latest release: v4.0.0" height="20" /></a>
 </p>
 
 <p align="center">

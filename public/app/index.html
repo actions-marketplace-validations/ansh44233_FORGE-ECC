@@ -3,19 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0b0a0e">
+<meta name="theme-color" content="#0e0f0a">
 <meta name="robots" content="noindex">
 <link rel="icon" type="image/svg+xml" href="/forge-mark.svg">
 <title>FORGE Control Center</title>
 <style>
-:root{color-scheme:dark;--bg:#0b0a0e;--panel:#141217;--panel2:#1a171d;--panel3:#211d24;--ink:#f4f0ed;--muted:#a59d9b;--faint:#6f6866;--line:rgba(235,218,210,.12);--line2:rgba(235,218,210,.2);--accent:#e8b3a2;--accent2:#a9c5d2;--ok:#9fd5a4;--warn:#f0c77a;--high:#f29b7c;--crit:#ff6b6b;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+:root{color-scheme:dark;--bg:#0e0f0a;--panel:#15160f;--panel2:#1b1c13;--panel3:#23241a;--ink:#f2efe1;--muted:#a8a38c;--faint:#716d58;--line:rgba(228,222,186,.12);--line2:rgba(228,222,186,.2);--accent:#e3b468;--accent2:#b9c97c;--ok:#b5d48a;--warn:#f0c77a;--high:#f29b7c;--crit:#ff6b6b;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{margin:0;background:radial-gradient(1200px 600px at 85% -10%,rgba(232,179,162,.08),transparent 60%),var(--bg);color:var(--ink);font:14px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
+body{margin:0;background:radial-gradient(1200px 600px at 85% -10%,rgba(227,180,104,.08),transparent 60%),var(--bg);color:var(--ink);font:14px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
 a{color:inherit}
 button{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
-.top{position:sticky;top:10px;z-index:5;display:flex;align-items:center;gap:18px;padding:0 10px 0 18px;height:56px;margin:10px 14px 0;border:1px solid var(--line2);border-radius:16px;background:rgba(14,12,17,.8);backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2);box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.top{position:sticky;top:10px;z-index:5;display:flex;align-items:center;gap:18px;padding:0 10px 0 18px;height:56px;margin:10px 14px 0;border:1px solid var(--line2);border-radius:16px;background:rgba(14,15,10,.8);backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2);box-shadow:0 12px 40px rgba(0,0,0,.3)}
 .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.08em;text-decoration:none}
 .brand img{width:26px;height:26px}
 .brand small{font-weight:600;letter-spacing:.02em;color:var(--muted)}
@@ -26,9 +26,9 @@ button{font:inherit;color:inherit}
 .spacer{flex:1}
 .who{color:var(--muted);font-size:13px}
 .btn{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;border:1px solid var(--line2);background:rgba(255,255,255,.04);font-weight:650;font-size:13px;text-decoration:none;cursor:pointer;transition:border-color .15s,background .15s;white-space:nowrap}
-.btn:hover{border-color:var(--accent);background:rgba(232,179,162,.08)}
+.btn:hover{border-color:var(--accent);background:rgba(227,180,104,.08)}
 .btn.primary{background:var(--accent);color:#1a1210;border-color:var(--accent)}
-.btn.primary:hover{background:#f0c4b5}
+.btn.primary:hover{background:#ecc584}
 .btn.sm{padding:4px 9px;font-size:12px;border-radius:8px}
 .btn[disabled]{opacity:.5;cursor:progress}
 .layout{display:grid;grid-template-columns:272px 1fr;min-height:calc(100vh - 76px);margin-top:10px}
@@ -44,8 +44,11 @@ aside h2{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(
 main{padding:26px 30px 70px;max-width:1320px;width:100%;min-width:0}
 .empty{max-width:600px;margin:11vh auto;text-align:center}
 .welcome{position:relative;isolation:isolate;overflow:hidden;min-height:calc(100vh - 66px)}
-.welcome:before{content:"";position:absolute;inset:0;z-index:-2;background:url('/forge-background.png') center/cover no-repeat;opacity:.22;filter:saturate(.9);-webkit-mask-image:linear-gradient(180deg,#000 0%,transparent 75%);mask-image:linear-gradient(180deg,#000 0%,transparent 75%)}
+.welcome:before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(80% 70% at 50% 28%,rgba(14,15,10,.62),rgba(14,15,10,.9) 75%),linear-gradient(180deg,transparent 60%,var(--bg) 100%)}
 .welcome .empty{margin:9vh auto 0;max-width:720px}
+.welcome-bg{position:absolute;inset:0;z-index:-2;width:100%;height:100%;object-fit:cover;object-position:50% 80%;opacity:.72;filter:blur(3px) saturate(1.1);transform:scale(1.04)}
+@media (max-width:760px){.welcome-bg{filter:blur(2px) saturate(1.05);transform:none}}
+@media (prefers-reduced-motion:reduce){.welcome-bg{display:none}.welcome{background:url('/assets/hero-loop.jpg') 50% 78%/cover no-repeat}}
 .welcome .empty h1{font-size:48px;letter-spacing:-.03em}
 .welcome .empty h1 span{color:var(--accent)}
 .shot{max-width:1100px;margin:44px auto 60px;padding:0 24px}
@@ -136,7 +139,7 @@ details.catd summary::-webkit-details-marker{display:none}
 .actions-list li:first-child{border-top:0}
 .actions-list li:before{content:counter(a);width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--panel3);color:var(--accent);font-weight:800;font-size:11px}
 .note{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--panel2);margin-bottom:12px}
-.note.handoff{border-color:rgba(232,179,162,.35)}
+.note.handoff{border-color:rgba(227,180,104,.35)}
 .note .fields{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
 .note .fields b{color:var(--muted);text-transform:none;letter-spacing:0;font-weight:650;margin-left:4px}
 .note .body{white-space:pre-wrap;word-break:break-word;font-size:13px}
@@ -153,7 +156,7 @@ details.catd summary::-webkit-details-marker{display:none}
 .cmd code{flex:1;overflow-x:auto;white-space:nowrap}
 .hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
 .hcard{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--panel)}
-.hcard.on{border-color:rgba(159,213,164,.35)}
+.hcard.on{border-color:rgba(181,212,138,.35)}
 .hcard .t{display:flex;align-items:center;gap:8px;font-weight:700;margin-bottom:10px}
 .hcard .t span{margin-left:auto}
 .hcard .t span.guard{margin-left:auto;color:#ffcf8a;border-color:rgba(255,207,138,.35);background:rgba(255,207,138,.08)}
@@ -163,7 +166,7 @@ details.catd summary::-webkit-details-marker{display:none}
 .loopc .g{font-weight:650;margin:6px 0}
 .checks{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .checks span{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-radius:7px;padding:2px 7px}
-.checks .p{color:var(--ok);border-color:rgba(159,213,164,.35)}
+.checks .p{color:var(--ok);border-color:rgba(181,212,138,.35)}
 .checks .f{color:var(--crit);border-color:rgba(255,107,107,.35)}
 .fleet td .bar{width:120px;display:inline-block;margin:0 8px 0 0;vertical-align:middle}
 .section-intro{color:var(--muted);font-size:13px;margin:-8px 0 16px;max-width:760px}
@@ -223,7 +226,7 @@ kbd{font-family:var(--mono);font-size:10.5px;border:1px solid var(--line2);borde
 <script>
 "use strict";
 const root = document.getElementById("root");
-const COLORS = ["#e8b3a2","#a9c5d2","#c7d5b2","#d8b4e2","#f0c77a","#8fb8a8","#c9a27e"];
+const COLORS = ["#e3b468","#b9c97c","#8fb8a8","#d9a86c","#a9c5d2","#c7d5b2","#c9a27e"];
 const SEV_RANK = { critical: 0, high: 1, medium: 2, low: 3 };
 const TABS = [
   ["overview", "Overview"], ["scorecard", "Scorecard"], ["shield", "Shield"], ["pulls", "Pull requests"],
@@ -296,7 +299,10 @@ let current = { name: "", tab: "overview" };
 // Signed out
 // ---------------------------------------------------------------------------
 function signedOut() {
-  root.replaceChildren(h("div", { class: "welcome" }, h("div", { class: "empty" },
+  const bg = h("video", { class: "welcome-bg", src: "/assets/hero-loop.mp4", poster: "/assets/hero-loop.jpg", muted: true, loop: true, autoplay: true, playsinline: true, preload: "metadata", "aria-hidden": "true" });
+  bg.muted = true;
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) { const p = bg.play(); if (p && p.catch) p.catch(() => {}); }
+  root.replaceChildren(h("div", { class: "welcome" }, bg, h("div", { class: "empty" },
     h("h1", {}, "Every agent change, ", h("span", {}, "verified.")),
     h("p", {}, "Sign in with GitHub to see readiness scores, Shield findings, pull request risk, team memory, learned instincts and verified loop receipts for every repository where the FORGE app is installed."),
     h("div", { class: "actions" },
