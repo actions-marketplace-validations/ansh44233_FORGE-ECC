@@ -111,6 +111,8 @@ FORGE is MIT-licensed and local-first. The CLI, hooks, Shield, memory and loop r
   <br /><sub>FORGE Control Center (sample data)</sub>
 </p>
 
+📣 **FORGE 4.0 is live!** [Read the launch announcement](https://github.com/ansh44233/FORGE-ECC/discussions/46).
+
 ## Install FORGE
 
 **Requirements:** Node.js 22 or newer and Git. Works on Windows, macOS and Linux.
