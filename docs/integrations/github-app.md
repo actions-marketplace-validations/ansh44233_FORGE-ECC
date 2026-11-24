@@ -15,7 +15,7 @@ The current release establishes the GitHub App installation and webhook verifica
 The App does **not yet** scan repository files, create pull requests, or run repository automation from the hosted website. For now, use the local FORGE CLI/dashboard for project inspection and engineering workflows:
 
 ```bash
-npm install --global https://github.com/ansh44233/FORGE-ECC/releases/download/v2.0.1/forge-engineering-workbench-2.0.1.tgz
+npm install --global https://github.com/ansh44233/FORGE-ECC/releases/download/v3.0.0/forge-engineering-workbench-3.0.0.tgz
 forge init ./my-project
 forge inspect ./my-project
 forge dashboard ./my-project

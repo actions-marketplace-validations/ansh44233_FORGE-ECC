@@ -1,7 +1,14 @@
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { analyzeRepository, type RepoProfile } from "./repo-analysis.js";
 import { computeRemoteDoctor, readRepository, remoteShield, runRemoteSetup, type AppContext, type RemoteDoctor } from "./app-handlers.js";
 import { assessPullRequestRisk, type PullRequestRisk } from "./pr-risk.js";
 import type { ShieldReport } from "../core/forge-shield.js";
+import type { GitHubClient } from "./github-client.js";
+import { HARNESS_CAPABILITIES, type CapabilitySupport } from "../core/harness-capabilities.js";
+import type { DoctorReport } from "../core/harness-installer.js";
+import { buildScorecard, type Scorecard } from "../core/harness-scorecard.js";
 
 /**
  * Data for the hosted FORGE dashboard (forge-ecc.vercel.app/app).
@@ -18,6 +25,125 @@ export interface RepoOverview {
   shield: Pick<ShieldReport, "score" | "grade" | "summary" | "filesScanned" | "findings">;
   pulls: Array<{ number: number; title: string; url: string; author: string; draft: boolean; risk: Pick<PullRequestRisk, "score" | "level" | "reasons" | "stats" | "suggestedReviewers"> }>;
   history: DashboardEvent[];
+  scorecard?: Pick<Scorecard, "total" | "max" | "percent" | "grade" | "categories" | "topActions">;
+  memory: { committed: boolean; entries: MemoryCard[] };
+  instincts: { committed: boolean; items: InstinctCard[] };
+  loops: LoopCard[];
+  harnesses: HarnessCard[];
+}
+
+export interface MemoryCard { id: string; kind: string; content: string; source?: string; evidence: string[]; tags: string[]; updatedAt: string }
+export interface InstinctCard { id: string; trigger: string; action: string; status: string; confidence: number; source: string; domain: string; occurrences: number }
+export interface LoopCard { id: string; status: string; goal: string; agent: string; checks: string[]; iterations: number; lastChecks: Array<{ command: string; passed: boolean }>; integrity: string[]; createdAt: string; finishedAt?: string; reason: string }
+export interface HarnessCard { target: string; name: string; detected: boolean; installed: boolean; capabilities: Record<string, CapabilitySupport> }
+
+type TreeEntry = { path: string; type: string; sha?: string; size?: number };
+
+const HARNESS_MARKERS: Record<string, RegExp> = {
+  claude: /^(?:\.claude\/|CLAUDE\.md$)/,
+  cursor: /^(?:\.cursor\/|\.cursorrules$)/,
+  codex: /^(?:\.codex\/|AGENTS\.md$)/,
+  opencode: /^(?:\.opencode\/|opencode\.json$)/,
+  gemini: /^(?:\.gemini\/|GEMINI\.md$)/,
+  copilot: /^\.github\/(?:copilot-instructions\.md$|instructions\/|prompts\/|agents\/)/,
+  windsurf: /^(?:\.windsurf\/|\.windsurfrules$)/,
+  kiro: /^\.kiro\//,
+  cline: /^\.clinerules(?:\/|$)/,
+  zed: /^(?:\.zed\/|\.rules$)/,
+};
+
+export function harnessCoverage(paths: string[], installedTargets: string[]): HarnessCard[] {
+  return HARNESS_CAPABILITIES.map(cap => ({
+    target: cap.target,
+    name: cap.displayName,
+    detected: paths.some(p => HARNESS_MARKERS[cap.target]?.test(p) ?? false),
+    installed: installedTargets.includes(cap.target),
+    capabilities: { ...cap.capabilities },
+  }));
+}
+
+const text = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
+
+export function parseMemoryCards(raw: string | undefined): MemoryCard[] {
+  if (!raw) return [];
+  try {
+    const doc = JSON.parse(raw) as { entries?: unknown[] };
+    if (!Array.isArray(doc.entries)) return [];
+    return doc.entries.flatMap(value => {
+      const e = value as Record<string, unknown>;
+      if (!e || typeof e !== "object" || typeof e.id !== "string" || typeof e.kind !== "string" || typeof e.content !== "string") return [];
+      return [{ id: e.id.slice(0, 80), kind: e.kind.slice(0, 20), content: text(e.content, 1200), ...(typeof e.source === "string" ? { source: e.source.slice(0, 20) } : {}), evidence: Array.isArray(e.evidence) ? e.evidence.filter((x): x is string => typeof x === "string").slice(0, 6).map(x => x.slice(0, 200)) : [], tags: Array.isArray(e.tags) ? e.tags.filter((x): x is string => typeof x === "string").slice(0, 8) : [], updatedAt: text(e.updatedAt, 40) || text(e.createdAt, 40) }];
+    }).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 40);
+  } catch { return []; }
+}
+
+export function parseInstinctCards(raw: string | undefined): InstinctCard[] {
+  if (!raw) return [];
+  try {
+    const doc = JSON.parse(raw) as { instincts?: unknown[] };
+    if (!Array.isArray(doc.instincts)) return [];
+    return doc.instincts.flatMap(value => {
+      const i = value as Record<string, unknown>;
+      if (!i || typeof i !== "object" || typeof i.id !== "string" || typeof i.trigger !== "string" || typeof i.action !== "string") return [];
+      return [{ id: i.id.slice(0, 40), trigger: text(i.trigger, 400), action: text(i.action, 400), status: text(i.status, 12) || "candidate", confidence: typeof i.confidence === "number" ? Math.max(0, Math.min(1, i.confidence)) : 0, source: text(i.source, 20), domain: text(i.domain, 32), occurrences: typeof i.occurrences === "number" ? i.occurrences : 1 }];
+    }).slice(0, 100);
+  } catch { return []; }
+}
+
+export function parseLoopCard(raw: string | undefined): LoopCard | undefined {
+  if (!raw) return undefined;
+  try {
+    const l = JSON.parse(raw) as Record<string, unknown>;
+    if (typeof l.id !== "string" || typeof l.status !== "string") return undefined;
+    const iterations = Array.isArray(l.iterations) ? l.iterations as Array<Record<string, unknown>> : [];
+    const last = iterations.at(-1);
+    const lastChecks = (Array.isArray(last?.checks) ? last.checks : Array.isArray((l.baseline as Record<string, unknown> | undefined)?.checks) ? (l.baseline as { checks: unknown[] }).checks : []) as Array<Record<string, unknown>>;
+    return {
+      id: l.id.slice(0, 60), status: l.status.slice(0, 20), goal: text(l.goal, 300), agent: text(l.agent, 20),
+      checks: Array.isArray(l.checks) ? l.checks.filter((c): c is string => typeof c === "string").slice(0, 10).map(c => c.slice(0, 160)) : [],
+      iterations: iterations.length,
+      lastChecks: lastChecks.slice(0, 10).map(c => ({ command: text(c.command, 160), passed: c.passed === true })),
+      integrity: [...new Set(iterations.flatMap(it => Array.isArray(it.integrity) ? (it.integrity as Array<Record<string, unknown>>).map(i => text(i.kind, 30)) : []))].filter(Boolean),
+      createdAt: text(l.createdAt, 40), ...(typeof l.finishedAt === "string" ? { finishedAt: l.finishedAt.slice(0, 40) } : {}), reason: text(l.reason, 300),
+    };
+  } catch { return undefined; }
+}
+
+/** Files the scorecard reads for content; everything else only needs to exist. */
+const SCORECARD_CONTENT = /^(?:package\.json|pyproject\.toml|\.claude\/settings\.json|\.forge\/memory\.json|\.forge\/instincts\.json|\.github\/workflows\/[^/]+\.ya?ml)$/;
+const SCORECARD_EXISTS = /^(?:[^/]+|\.github\/(?:dependabot\.yml|renovate\.json|copilot-instructions\.md)|\.(?:claude|agents)\/skills\/forge-(?:project|learned)\/SKILL\.md|\.(?:windsurf|kiro|zed|cursor|codex|opencode|gemini|clinerules)\/[^/]+)$/;
+
+export function doctorFromRemote(setup: RemoteDoctor, forgeVersion: string): DoctorReport {
+  return {
+    installed: setup.installed,
+    healthy: setup.healthy,
+    currentVersion: forgeVersion,
+    ...(setup.state ? { forgeVersion: setup.state.forgeVersion, profile: setup.state.profile, targets: setup.state.targets, ...(setup.state.languages ? { languages: setup.state.languages } : {}), hooks: Boolean(setup.state.hooks) } : {}),
+    entries: [],
+    summary: { ok: 0, missing: setup.missing.length, modified: 0, outdated: setup.outdated.length },
+    recommendations: [],
+  };
+}
+
+async function remoteScorecard(client: GitHubClient, owner: string, repo: string, ref: string, entries: TreeEntry[], doctor: DoctorReport, shield: ShieldReport, now: () => Date): Promise<Scorecard> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "forge-score-"));
+  try {
+    const blobs = entries.filter(e => e.type === "blob" && (e.size ?? 0) <= 512 * 1024);
+    const content = blobs.filter(e => SCORECARD_CONTENT.test(e.path)).slice(0, 40);
+    const present = blobs.filter(e => !SCORECARD_CONTENT.test(e.path) && SCORECARD_EXISTS.test(e.path)).slice(0, 400);
+    const texts = await Promise.all(content.map(async e => [e.path, await client.getFileText(owner, repo, e.path, ref).catch(() => undefined)] as const));
+    const write = async (file: string, body: string) => {
+      const target = path.join(root, ...file.split("/"));
+      if (!target.startsWith(root + path.sep)) return;
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, body, "utf8");
+    };
+    for (const e of present) await write(e.path, "");
+    for (const [file, body] of texts) if (typeof body === "string") await write(file, body);
+    return await buildScorecard({ projectPath: root, forgeVersion: doctor.currentVersion, now, doctor, shield });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 }
 
 interface PullSummary { number: number; title: string; html_url: string; draft?: boolean; user?: { login?: string } }
@@ -29,11 +155,19 @@ export async function buildRepoOverview(context: AppContext, owner: string, repo
   const data = await readRepository(client, owner, repo, ref);
   const files = data.entries.filter(entry => entry.type === "blob").map(entry => entry.path).filter(file => !/^\.forge\/|(?:^|\/)forge-[\w.-]+(?:\/SKILL)?\.(?:md|mdc|toml)$/.test(file));
   const profile = analyzeRepository({ name: `${owner}/${repo}`, files, manifests: data.manifests, commits: data.commits.map(commit => commit.message) });
-  const [setup, shield, pulls] = await Promise.all([
+  const blobPaths = new Set(data.entries.filter(entry => entry.type === "blob").map(entry => entry.path));
+  const read = (file: string) => blobPaths.has(file) ? client.getFileText(owner, repo, file, ref).catch(() => undefined) : Promise.resolve(undefined);
+  const loopFiles = [...blobPaths].filter(file => /^\.forge\/loops\/loop-[\w-]+\.json$/.test(file)).sort().reverse().slice(0, 8);
+  const [setup, shield, pulls, memoryRaw, instinctsRaw, loopRaws] = await Promise.all([
     computeRemoteDoctor(context, owner, repo, { ref, entries: data.entries }),
     remoteShield(client, owner, repo, ref, data.entries),
     client.request<PullSummary[]>("GET", `${client.repo(owner, repo)}/pulls?state=open&per_page=6&sort=updated`).catch(() => [] as PullSummary[]),
+    read(".forge/memory.json"),
+    read(".forge/instincts.json"),
+    Promise.all(loopFiles.map(read)),
   ]);
+  const now = context.now ?? (() => new Date());
+  const scorecard = await remoteScorecard(client, owner, repo, ref, data.entries, doctorFromRemote(setup, context.forgeVersion), shield, now).catch(() => undefined);
   const scoredPulls = await Promise.all(pulls.slice(0, 6).map(async pull => {
     const risk = assessPullRequestRisk(await client.listPullFiles(owner, repo, pull.number, 1).catch(() => []));
     return { number: pull.number, title: pull.title, url: pull.html_url, author: pull.user?.login ?? "", draft: Boolean(pull.draft), risk: { score: risk.score, level: risk.level, reasons: risk.reasons.slice(0, 5), stats: risk.stats, suggestedReviewers: risk.suggestedReviewers } };
@@ -46,6 +180,11 @@ export async function buildRepoOverview(context: AppContext, owner: string, repo
     shield: { score: shield.score, grade: shield.grade, summary: shield.summary, filesScanned: shield.filesScanned, findings: shield.findings.slice(0, 50) },
     pulls: scoredPulls,
     history: history.slice(0, 25),
+    ...(scorecard ? { scorecard: { total: scorecard.total, max: scorecard.max, percent: scorecard.percent, grade: scorecard.grade, categories: scorecard.categories, topActions: scorecard.topActions } } : {}),
+    memory: { committed: blobPaths.has(".forge/memory.json"), entries: parseMemoryCards(memoryRaw) },
+    instincts: { committed: blobPaths.has(".forge/instincts.json"), items: parseInstinctCards(instinctsRaw) },
+    loops: loopRaws.map(parseLoopCard).filter((l): l is LoopCard => Boolean(l)),
+    harnesses: harnessCoverage([...blobPaths], setup.state?.targets ?? []),
   };
 }
 

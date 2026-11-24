@@ -5,13 +5,19 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { detectProjectLanguages, loadHarnessCatalog, parseCatalogItem, selectCatalogItems } from "../src/core/harness-catalog.js";
 import {
+  applyFileTransaction,
   buildInstallPlan,
+  detectHarnessTargets,
   doctorHarness,
   extractManagedBlock,
   installHarness,
   INSTALL_STATE_PATH,
+  STATE_SCHEMA,
+  loadInstallState,
+  HARNESS_TARGETS,
   parseTargets,
   uninstallHarness,
+  recoverFileTransaction,
 } from "../src/core/harness-installer.js";
 
 const directories: string[] = [];
@@ -29,6 +35,128 @@ async function exists(file: string): Promise<boolean> {
 }
 afterEach(async () => {
   await Promise.all(directories.splice(0).map(directory => rm(directory, { recursive: true, force: true })));
+});
+
+describe("installer file transaction recovery", () => {
+  it("restores snapshots from a journal left by an interrupted process", async () => {
+    const root = await project({ "existing.txt": "before" });
+    const forgeDir = path.join(root, ".forge");
+    await mkdir(forgeDir, { recursive: true });
+    await writeFile(path.join(root, "existing.txt"), "partially-written");
+    await writeFile(path.join(root, "new.txt"), "partial-create");
+    await writeFile(path.join(forgeDir, "transaction-journal.json"), JSON.stringify({
+      schemaVersion: 1,
+      snapshots: [
+        { path: "existing.txt", contentBase64: Buffer.from("before", "utf8").toString("base64") },
+        { path: "new.txt", contentBase64: null },
+      ],
+    }));
+    await expect(recoverFileTransaction(root)).resolves.toBe(true);
+    await expect(readFile(path.join(root, "existing.txt"), "utf8")).resolves.toBe("before");
+    expect(await exists(path.join(root, "new.txt"))).toBe(false);
+    expect(await exists(path.join(forgeDir, "transaction-journal.json"))).toBe(false);
+  });
+
+  it("refuses malformed journals without deleting them", async () => {
+    const root = await project();
+    const forgeDir = path.join(root, ".forge");
+    await mkdir(forgeDir, { recursive: true });
+    const journalPath = path.join(forgeDir, "transaction-journal.json");
+    await writeFile(journalPath, JSON.stringify({ schemaVersion: 99, snapshots: [] }));
+    await expect(recoverFileTransaction(root)).rejects.toThrow(/invalid/);
+    expect(await exists(journalPath)).toBe(true);
+  });
+
+  it("rejects non-canonical base64 snapshots without modifying project files", async () => {
+    const root = await project({ "keep.txt": "partially-written" });
+    const forgeDir = path.join(root, ".forge");
+    await mkdir(forgeDir, { recursive: true });
+    const journalPath = path.join(forgeDir, "transaction-journal.json");
+    await writeFile(journalPath, JSON.stringify({
+      schemaVersion: 1,
+      snapshots: [{ path: "keep.txt", contentBase64: "%%%not-base64%%%" }],
+    }));
+    await expect(recoverFileTransaction(root)).rejects.toThrow(/invalid/);
+    await expect(readFile(path.join(root, "keep.txt"), "utf8")).resolves.toBe("partially-written");
+    expect(await exists(journalPath)).toBe(true);
+  });
+
+  it("rejects duplicate snapshot paths rather than applying ambiguous restores", async () => {
+    const root = await project({ "keep.txt": "partially-written" });
+    const forgeDir = path.join(root, ".forge");
+    await mkdir(forgeDir, { recursive: true });
+    const journalPath = path.join(forgeDir, "transaction-journal.json");
+    await writeFile(journalPath, JSON.stringify({
+      schemaVersion: 1,
+      snapshots: [
+        { path: "keep.txt", contentBase64: Buffer.from("first").toString("base64") },
+        { path: "keep.txt", contentBase64: Buffer.from("second").toString("base64") },
+      ],
+    }));
+    await expect(recoverFileTransaction(root)).rejects.toThrow(/duplicate/);
+    await expect(readFile(path.join(root, "keep.txt"), "utf8")).resolves.toBe("partially-written");
+    expect(await exists(journalPath)).toBe(true);
+  });
+});
+
+describe("durable installer lifecycle recovery", () => {
+  it("recovers an interrupted transaction before install reads or writes project files", async () => {
+    const root = await project({ "AGENTS.md": "# User instructions\n" });
+    const forgeDir = path.join(root, ".forge");
+    await mkdir(forgeDir, { recursive: true });
+    await writeFile(path.join(root, "AGENTS.md"), "partially-written");
+    await writeFile(path.join(forgeDir, "transaction-journal.json"), JSON.stringify({
+      schemaVersion: 1,
+      snapshots: [{ path: "AGENTS.md", contentBase64: Buffer.from("# User instructions\n", "utf8").toString("base64") }],
+    }));
+
+    await installHarness({ projectPath: root, forgeVersion: "test", targets: ["codex"] });
+
+    const restored = await readFile(path.join(root, "AGENTS.md"), "utf8");
+    expect(restored.startsWith("# User instructions\n")).toBe(true);
+    expect(restored).toContain("FORGE engineering harness");
+    expect(await exists(path.join(forgeDir, "transaction-journal.json"))).toBe(false);
+  });
+
+  it("recovers an interrupted transaction before uninstall checks install state", async () => {
+    const root = await project({ "AGENTS.md": "# Keep this file\n" });
+    const forgeDir = path.join(root, ".forge");
+    await mkdir(forgeDir, { recursive: true });
+    await writeFile(path.join(root, "AGENTS.md"), "partially-removed");
+    await writeFile(path.join(forgeDir, "transaction-journal.json"), JSON.stringify({
+      schemaVersion: 1,
+      snapshots: [{ path: "AGENTS.md", contentBase64: Buffer.from("# Keep this file\n", "utf8").toString("base64") }],
+    }));
+
+    await expect(uninstallHarness({ projectPath: root })).resolves.toMatchObject({ installed: false });
+    await expect(readFile(path.join(root, "AGENTS.md"), "utf8")).resolves.toBe("# Keep this file\n");
+    expect(await exists(path.join(forgeDir, "transaction-journal.json"))).toBe(false);
+  });
+});
+
+describe("installer file transaction", () => {
+  it("restores earlier writes when a later operation fails", async () => {
+    const root = await project({ "blocker": "original" });
+    const blocker = path.join(root, "blocker");
+    await expect(applyFileTransaction([
+      { path: blocker, content: "updated" },
+      { path: path.join(blocker, "child.txt"), content: "cannot-write" },
+    ])).rejects.toThrow("All applied changes were rolled back");
+    await expect(readFile(blocker, "utf8")).resolves.toBe("original");
+  });
+  it("restores deleted files and removes newly created files after failure", async () => {
+    const root = await project({ "blocker": "keep", "to-delete.txt": "restore-me" });
+    const blocker = path.join(root, "blocker");
+    const created = path.join(root, "created.txt");
+    const deleted = path.join(root, "to-delete.txt");
+    await expect(applyFileTransaction([
+      { path: deleted, content: null },
+      { path: created, content: "temporary" },
+      { path: path.join(blocker, "child.txt"), content: "cannot-write" },
+    ])).rejects.toThrow("All applied changes were rolled back");
+    await expect(readFile(deleted, "utf8")).resolves.toBe("restore-me");
+    expect(await exists(created)).toBe(false);
+  });
 });
 
 describe("harness catalog", () => {
@@ -65,11 +193,52 @@ describe("harness catalog", () => {
 });
 
 describe("harness installer", () => {
-  it("rejects unknown targets", () => {
+  it("derives the accepted target list from the capability manifest", () => {
+    expect(parseTargets("all")).toEqual([...HARNESS_TARGETS]);
+    expect(parseTargets("claude,claude,codex")).toEqual(["claude", "codex"]);
     expect(() => parseTargets("claude,vim")).toThrow(/Unknown target/);
-    expect(parseTargets("all")).toContain("gemini");
   });
 
+  it("rejects unsupported targets passed directly to the install planner", async () => {
+    const root = await project();
+    await expect(buildInstallPlan({
+      projectPath: root,
+      forgeVersion: "test",
+      targets: ["vim" as never],
+    })).rejects.toThrow(/Unknown target/);
+  });
+
+  it("migrates a valid v1 install state in memory without changing its payload", async () => {
+    const root = await project();
+    const legacy = { schemaVersion: 1, forgeVersion: "2.0.1", installedAt: "2026-01-01T00:00:00.000Z", profile: "minimal", targets: ["claude"], languages: [], files: [], blocks: [] };
+    await mkdir(path.join(root, ".forge"), { recursive: true });
+    const statePath = path.join(root, INSTALL_STATE_PATH);
+    await writeFile(statePath, JSON.stringify(legacy));
+    const migrated = await loadInstallState(root);
+    expect(migrated?.schemaVersion).toBe(STATE_SCHEMA);
+    expect(migrated?.forgeVersion).toBe("2.0.1");
+    expect(JSON.parse(await readFile(statePath, "utf8")).schemaVersion).toBe(1);
+  });
+
+  it("refuses future state schemas without modifying the state file", async () => {
+    const root = await project();
+    await mkdir(path.join(root, ".forge"), { recursive: true });
+    const statePath = path.join(root, INSTALL_STATE_PATH);
+    const future = JSON.stringify({ schemaVersion: STATE_SCHEMA + 1, files: [], blocks: [] });
+    await writeFile(statePath, future);
+    await expect(loadInstallState(root)).rejects.toThrow(/Upgrade FORGE/);
+    expect(await readFile(statePath, "utf8")).toBe(future);
+  });
+
+  it("rejects malformed state entries without deleting the state file", async () => {
+    const root = await project();
+    await mkdir(path.join(root, ".forge"), { recursive: true });
+    const statePath = path.join(root, INSTALL_STATE_PATH);
+    const malformed = JSON.stringify({ schemaVersion: STATE_SCHEMA, forgeVersion: "test", installedAt: "now", profile: "minimal", targets: ["claude"], languages: [], files: [{ path: "../outside", sha256: "bad", targets: ["claude"] }], blocks: [] });
+    await writeFile(statePath, malformed);
+    await expect(loadInstallState(root)).rejects.toThrow();
+    expect(await readFile(statePath, "utf8")).toBe(malformed);
+  });
   it("renders native files for each harness", async () => {
     const root = await project();
     const plan = await buildInstallPlan({ projectPath: root, forgeVersion: "test", profile: "minimal" });
@@ -153,6 +322,30 @@ describe("harness installer", () => {
     }
   });
 
+  it("preserves modified managed blocks and install state during uninstall", async () => {
+    const root = await project({ "package.json": "{}", "AGENTS.md": "# Personal instructions\n" });
+    await installHarness({ projectPath: root, forgeVersion: "test", targets: ["codex"] });
+    const agentsPath = path.join(root, "AGENTS.md");
+    const before = await readFile(agentsPath, "utf8");
+    await writeFile(agentsPath, before.replace("FORGE engineering harness", "Locally customized FORGE harness"));
+    const result = await uninstallHarness({ projectPath: root });
+    expect(result.changes.some(change => change.path === "AGENTS.md" && change.action === "keep-modified")).toBe(true);
+    expect(await readFile(agentsPath, "utf8")).toContain("Locally customized FORGE harness");
+    const state = await loadInstallState(root);
+    expect(state?.blocks.map(block => block.path)).toContain("AGENTS.md");
+  });
+
+  it("keeps modified generated files tracked after uninstall", async () => {
+    const root = await project();
+    await installHarness({ projectPath: root, forgeVersion: "test", targets: ["claude"], profile: "minimal" });
+    const filePath = path.join(root, ".claude/agents/forge-planner.md");
+    await writeFile(filePath, (await readFile(filePath, "utf8")) + "\nlocal note\n");
+    const result = await uninstallHarness({ projectPath: root });
+    expect(result.changes.some(change => change.path.endsWith("forge-planner.md") && change.action === "keep-modified")).toBe(true);
+    expect(await exists(filePath)).toBe(true);
+    expect((await loadInstallState(root))?.files.some(file => file.path.endsWith("forge-planner.md"))).toBe(true);
+  });
+
   it("refuses to write through symlinked directories", async () => {
     const root = await project();
     const outside = await project({});
@@ -182,5 +375,71 @@ describe("harness CLI", () => {
   it("rejects unknown options", async () => {
     const root = await project();
     expect(() => runCli("install", root, "--bogus")).toThrow();
+  });
+});
+
+describe("opt-in harness targets", () => {
+  it("keeps the default target set unchanged and accepts default/all keywords", async () => {
+    expect(parseTargets("default")).toEqual(["claude", "cursor", "codex", "opencode", "gemini"]);
+    expect(parseTargets("all")).toHaveLength(HARNESS_TARGETS.length);
+    const plan = await buildInstallPlan({ projectPath: await project(), forgeVersion: "test" });
+    expect(plan.targets).toEqual(["claude", "cursor", "codex", "opencode", "gemini"]);
+  });
+
+  it("detects harnesses the project already uses", async () => {
+    const root = await project({ "package.json": "{}", ".github/copilot-instructions.md": "# team\n", ".kiro/steering/x.md": "x", ".clinerules": "" });
+    expect(await detectHarnessTargets(root)).toEqual(["copilot", "kiro", "cline"]);
+  });
+
+  it("renders native Copilot, Windsurf, Kiro and Cline files plus managed blocks", async () => {
+    const plan = await buildInstallPlan({ projectPath: await project(), forgeVersion: "test", targets: ["copilot", "windsurf", "kiro", "cline", "zed"] });
+    const paths = plan.files.map(file => file.path);
+    expect(paths.some(p => p.startsWith(".github/instructions/forge-common-") && p.endsWith(".instructions.md"))).toBe(true);
+    expect(paths.some(p => p.startsWith(".github/prompts/forge-") && p.endsWith(".prompt.md"))).toBe(true);
+    expect(paths.some(p => p.startsWith(".github/agents/forge-") && p.endsWith(".agent.md"))).toBe(true);
+    expect(paths.some(p => p.startsWith(".windsurf/rules/forge-common-"))).toBe(true);
+    expect(paths.some(p => p.startsWith(".windsurf/workflows/forge-"))).toBe(true);
+    expect(paths.some(p => p.startsWith(".kiro/steering/forge-agent-"))).toBe(true);
+    expect(paths.some(p => p.startsWith(".clinerules/workflows/forge-"))).toBe(true);
+    expect(paths.some(p => p.startsWith(".agents/skills/forge-"))).toBe(true);
+    expect(plan.blocks.map(block => block.path)).toEqual([".clinerules/forge-harness.md", ".github/copilot-instructions.md", ".kiro/steering/forge-harness.md", "AGENTS.md"]);
+    const common = plan.files.find(file => file.path.startsWith(".windsurf/rules/forge-common-"));
+    expect(common?.content).toMatch(/^---\ntrigger: always_on/);
+    const steering = plan.files.find(file => file.path.startsWith(".kiro/steering/forge-common-"));
+    expect(steering?.content).toMatch(/inclusion: always/);
+    const prompt = plan.files.find(file => file.path.startsWith(".github/prompts/"));
+    expect(prompt?.content).not.toContain("$ARGUMENTS");
+  });
+
+  it("installs and uninstalls a new target cleanly", async () => {
+    const root = await project({ "package.json": "{}", ".github/copilot-instructions.md": "# Team notes\n" });
+    await installHarness({ projectPath: root, forgeVersion: "test", targets: ["copilot"] });
+    const instructions = await readFile(path.join(root, ".github/copilot-instructions.md"), "utf8");
+    expect(instructions).toContain("# Team notes");
+    expect(instructions).toContain("forge:begin");
+    expect((await doctorHarness({ projectPath: root, forgeVersion: "test" })).healthy).toBe(true);
+    await uninstallHarness({ projectPath: root });
+    await expect(readFile(path.join(root, ".github/copilot-instructions.md"), "utf8")).resolves.toBe("# Team notes\n");
+    expect(await exists(path.join(root, ".github/prompts"))).toBe(false);
+  });
+});
+
+describe("stack-scoped skills", () => {
+  it("installs stack skills only for detected languages, and all of them with the full profile", async () => {
+    const catalog = await loadHarnessCatalog();
+    const ids = (languages: string[] | undefined, profile: "standard" | "full" = "standard") => new Set(selectCatalogItems(catalog, languages ? { profile, languages } : { profile }).filter(i => i.kind === "skill").map(i => i.id));
+    const python = ids(["python"]);
+    expect(python.has("django-apps")).toBe(true);
+    expect(python.has("go-services")).toBe(false);
+    expect(python.has("postgres-queries")).toBe(true);
+    const ts = ids(["typescript", "react"]);
+    expect(ts.has("nextjs-app-router")).toBe(true);
+    expect(ts.has("django-apps")).toBe(false);
+    expect(ids(undefined, "full").has("go-services")).toBe(true);
+    expect(catalog.items.filter(i => i.kind === "skill").length).toBeGreaterThanOrEqual(50);
+  });
+
+  it("rejects a languages field on rules", () => {
+    expect(() => parseCatalogItem("rule", "x", "---\ndescription: d\nlanguages: python\n---\n# X\nbody", "rules/common/x.md", "common")).toThrow(/languages/);
   });
 });

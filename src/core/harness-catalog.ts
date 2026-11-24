@@ -27,6 +27,12 @@ export interface CatalogItem {
   globs?: string[];
   /** Agents only: Claude Code tool allow-list. */
   tools?: string[];
+  /**
+   * Skills, agents and commands: stacks the item is for (e.g. "python"). Installed only
+   * when one of them is detected (or with --profile full), so projects get stack
+   * guidance without loading every framework's skills into context.
+   */
+  languages?: string[];
   /** Commands only: argument hint shown by harnesses that support it. */
   argumentHint?: string;
   body: string;
@@ -100,6 +106,12 @@ export function parseCatalogItem(kind: CatalogKind, id: string, content: string,
   if (globs.length) item.globs = globs;
   const tools = list(metadata.get("tools"));
   if (tools.length) item.tools = tools;
+  const languages = list(metadata.get("languages")).map(value => value.toLowerCase());
+  if (languages.length) {
+    if (kind === "rule") throw new Error(`Catalog rule ${sourcePath} uses "languages"; rules take their language from their folder.`);
+    for (const value of languages) if (!ID_PATTERN.test(value)) throw new Error(`Catalog item ${sourcePath} has an invalid language "${value}".`);
+    item.languages = languages;
+  }
   const argumentHint = metadata.get("argument-hint");
   if (argumentHint) item.argumentHint = argumentHint;
   return item;
@@ -190,6 +202,7 @@ export function selectCatalogItems(catalog: HarnessCatalog, selection: CatalogSe
     if (PROFILE_RANK[item.profile] > PROFILE_RANK[selection.profile]) return false;
     if (selection.kinds && !selection.kinds.includes(item.kind)) return false;
     if (item.kind === "rule" && languages && !languages.has(item.language ?? "common")) return false;
+    if (item.languages && languages && !item.languages.some(language => languages.has(language))) return false;
     return true;
   });
 }

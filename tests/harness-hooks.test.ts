@@ -163,3 +163,76 @@ describe("layered memory", () => {
     expect(hits).toHaveLength(5);
   });
 });
+
+describe("v3 guard and lifecycle hooks", () => {
+  it("blocks skipping git hooks without false positives on ordinary commits", async () => {
+    const { evaluateCommand } = await import("../src/core/harness-hooks.js");
+    expect(evaluateCommand("git commit -m wip --no-verify").ruleId).toBe("GUARD-NO-VERIFY");
+    expect(evaluateCommand("git commit -an -m wip").ruleId).toBe("GUARD-NO-VERIFY");
+    expect(evaluateCommand("git push --no-verify origin feat").decision).toBe("deny");
+    expect(evaluateCommand('git commit -m "use -n carefully"').decision).toBe("allow");
+    expect(evaluateCommand("git push -n origin feat").decision).toBe("allow");
+    expect(evaluateCommand("HUSKY=0 git commit -m x").ruleId).toBe("GUARD-HOOKS-BYPASS");
+  });
+
+  it("validates project rules and applies them", async () => {
+    const { evaluateCommand, parseCustomRules } = await import("../src/core/harness-hooks.js");
+    const rules = parseCustomRules([
+      { id: "USER-NO-PROD-DB", decision: "deny", pattern: "psql\\s+.*prod", reason: "No prod DB from agents." },
+      { id: "GUARD-SPOOF", decision: "deny", pattern: "x" },
+      { id: "USER-BAD-REGEX", decision: "ask", pattern: "(" },
+      { id: "USER-ALLOWISH", decision: "allow", pattern: "x" },
+    ]);
+    expect(rules.map(r => r.id)).toEqual(["USER-NO-PROD-DB"]);
+    expect(evaluateCommand("psql -h prod-db", [], rules)).toMatchObject({ decision: "deny", ruleId: "USER-NO-PROD-DB" });
+  });
+
+  it("asks before loosening lint configs and blocks pasted credentials", async () => {
+    const { evaluateToolUse, runHarnessHook } = await import("../src/core/harness-hooks.js");
+    expect(evaluateToolUse("/repo", "Edit", { file_path: "/repo/eslint.config.js" }).ruleId).toBe("GUARD-QUALITY-CONFIG");
+    expect(evaluateToolUse("/repo", "Edit", { file_path: "/repo/src/eslint-helper.ts" }).decision).toBe("allow");
+    const blocked = await runHarnessHook("prompt-submit", JSON.stringify({ cwd: os.tmpdir(), prompt: "deploy with ghp_" + "a".repeat(36) }));
+    expect((blocked.json as { decision?: string }).decision).toBe("block");
+    const fine = await runHarnessHook("prompt-submit", JSON.stringify({ cwd: os.tmpdir(), prompt: "set GITHUB_TOKEN in the env" }));
+    expect(fine.json).toBeUndefined();
+  });
+
+  it("saves an automatic handoff before compaction", async () => {
+    const { runHarnessHook } = await import("../src/core/harness-hooks.js");
+    const { latestHandoff } = await import("../src/core/project-memory.js");
+    const root = await mkdtemp(path.join(os.tmpdir(), "forge-compact-"));
+    try {
+      await runHarnessHook("post-edit", JSON.stringify({ cwd: root, tool_name: "Write", tool_input: { file_path: path.join(root, "a.ts") } }));
+      await runHarnessHook("pre-compact", JSON.stringify({ cwd: root, trigger: "auto" }));
+      expect((await latestHandoff(root))?.content).toMatch(/before automatic compaction.*edited a\.ts/);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("statusline install", () => {
+  it("adds the FORGE status line, removes it on uninstall and never replaces the user's own", async () => {
+    const fresh = await mkdtemp(path.join(os.tmpdir(), "forge-status-"));
+    const custom = await mkdtemp(path.join(os.tmpdir(), "forge-status-"));
+    try {
+      await writeFile(path.join(fresh, "package.json"), "{}");
+      await installHarness({ projectPath: fresh, forgeVersion: "test", targets: ["claude"], hooks: true, statusLine: true });
+      const settings = JSON.parse(await readFile(path.join(fresh, ".claude/settings.json"), "utf8")) as { statusLine?: { command?: string } };
+      expect(settings.statusLine?.command).toBe("forge statusline");
+      expect((await doctorHarness({ projectPath: fresh, forgeVersion: "test" })).healthy).toBe(true);
+      await uninstallHarness({ projectPath: fresh });
+      await expect(readFile(path.join(fresh, ".claude/settings.json"), "utf8")).rejects.toThrow();
+
+      await mkdir(path.join(custom, ".claude"), { recursive: true });
+      await writeFile(path.join(custom, ".claude/settings.json"), JSON.stringify({ statusLine: { type: "command", command: "my-line" } }));
+      await installHarness({ projectPath: custom, forgeVersion: "test", targets: ["claude"], hooks: true, statusLine: true });
+      await uninstallHarness({ projectPath: custom });
+      const kept = JSON.parse(await readFile(path.join(custom, ".claude/settings.json"), "utf8")) as { statusLine?: { command?: string } };
+      expect(kept.statusLine?.command).toBe("my-line");
+    } finally {
+      await rm(fresh, { recursive: true, force: true });
+      await rm(custom, { recursive: true, force: true });
+    }
+  });
+});

@@ -1,4 +1,5 @@
 import { constants } from "node:fs";
+import { EXTENDED_DIRECTORIES, EXTENDED_INSTRUCTION_FILES, EXTENDED_MCP_FILES, EXTENDED_RULES, EXTENDED_SETTINGS_FILES, mcpServers, scanClaudeSettingsExtended, scanHookCommandExtended, scanInstructionsExtended, scanMcpExtended, scanMcpShadowing, scanOtherSettings, scanRepositoryExtended, scanTextExtended, scanWorkflowExtended, type MakeFinding } from "./shield-extended.js";
 import { lstat, open, readdir, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import path from "node:path";
@@ -74,6 +75,7 @@ export const SHIELD_RULES: Record<string, ShieldRule> = Object.fromEntries(([
   { id: "SHIELD-CI-001", severity: "high", category: "ci", title: "pull_request_target workflow checks out untrusted code", recommendation: "Do not check out the PR head in `pull_request_target`; use `pull_request` or split privileged steps into a separate workflow." },
   { id: "SHIELD-CI-002", severity: "medium", category: "ci", title: "Workflow grants write-all permissions", recommendation: "Declare least-privilege `permissions:` per job (e.g. `contents: read`)." },
   { id: "SHIELD-CI-003", severity: "medium", category: "ci", title: "Untrusted event text interpolated into a run step", recommendation: "Pass `${{ github.event.* }}` values through `env:` and quote them instead of interpolating into shell code." },
+  ...EXTENDED_RULES,
 ] as ShieldRule[]).map(rule => [rule.id, rule]));
 
 const LEGACY_RULE_MAP: Record<string, string> = {
@@ -90,10 +92,11 @@ const MAX_ENTRIES = 30_000;
 const MAX_FILE_BYTES = 256 * 1024;
 const MAX_DEPTH = 6;
 
-const INSTRUCTION_FILES = ["AGENTS.md", "CLAUDE.md", "CLAUDE.local.md", "GEMINI.md", ".cursorrules", ".windsurfrules", ".github/copilot-instructions.md"];
+const INSTRUCTION_FILES = [...new Set(["AGENTS.md", "CLAUDE.md", "CLAUDE.local.md", "GEMINI.md", ".cursorrules", ".windsurfrules", ".github/copilot-instructions.md", ...EXTENDED_INSTRUCTION_FILES])];
 const SETTINGS_FILES = [".claude/settings.json", ".claude/settings.local.json"];
-const MCP_FILES = [".mcp.json", "mcp.json", ".cursor/mcp.json", ".vscode/mcp.json", ".gemini/settings.json", "opencode.json"];
-const SCANNED_DIRECTORIES = [".claude/agents", ".claude/commands", ".claude/skills", ".claude/hooks", ".claude/rules", ".cursor/rules", ".cursor/commands", ".opencode", ".gemini/commands", ".agents/skills", ".forge/skills", ".forge/hooks", ".forge/harness", ".github/workflows"];
+const MCP_FILES = [".mcp.json", "mcp.json", ".cursor/mcp.json", ".vscode/mcp.json", ".gemini/settings.json", "opencode.json", ...EXTENDED_MCP_FILES];
+const OTHER_SETTINGS_FILES = EXTENDED_SETTINGS_FILES;
+const SCANNED_DIRECTORIES = [".claude/agents", ".claude/commands", ".claude/skills", ".claude/hooks", ".claude/rules", ".cursor/rules", ".cursor/commands", ".opencode", ".gemini/commands", ".agents/skills", ".forge/skills", ".forge/hooks", ".forge/harness", ".github/workflows", ...EXTENDED_DIRECTORIES];
 const SCANNED_EXTENSIONS = new Set([".md", ".mdc", ".json", ".yaml", ".yml", ".toml", ".sh", ".js", ".mjs", ".cjs", ".ts", ".py"]);
 
 function isMissing(error: unknown): boolean {
@@ -157,7 +160,7 @@ async function walk(root: string, directory: string, depth: number, files: Set<s
 export async function discoverShieldFiles(projectPath: string): Promise<{ root: string; files: string[] }> {
   const root = await realpath(path.resolve(projectPath));
   const files = new Set<string>();
-  for (const relative of [...INSTRUCTION_FILES, ...SETTINGS_FILES, ...MCP_FILES, ".forge/permissions.json", ".forge/policy.json"]) await addFile(root, relative, files);
+  for (const relative of [...INSTRUCTION_FILES, ...SETTINGS_FILES, ...MCP_FILES, ...OTHER_SETTINGS_FILES, ".forge/permissions.json", ".forge/policy.json"]) await addFile(root, relative, files);
   const visited = { count: 0 };
   for (const relative of SCANNED_DIRECTORIES) await walk(root, path.join(root, relative), 0, files, visited);
   return { root, files: [...files].sort() };
@@ -274,6 +277,7 @@ function scanClaudeSettings(file: string, content: string, json: unknown): Shiel
     if (["Bash", "Bash(*)", "Bash(:*)", "Bash(**)", "PowerShell", "PowerShell(*)"].includes(normalized)) findings.push(finding("SHIELD-PERM-002", file, lineOf(content, `"${rule}"`), `\`${rule}\` pre-approves any shell command.`));
     else if (normalized === "*" || normalized === "mcp__*" || normalized === "mcp__*__*") findings.push(finding("SHIELD-PERM-005", file, lineOf(content, `"${rule}"`), `\`${rule}\` approves a wildcard set of tools.`));
   }
+  findings.push(...scanClaudeSettingsExtended(file, content, settings, finding as MakeFinding) as ShieldFinding[]);
   if (settings.enableAllProjectMcpServers === true) findings.push(finding("SHIELD-PERM-003", file, lineOf(content, "enableAllProjectMcpServers"), "Any MCP server added to `.mcp.json` starts without review."));
   const deny = Array.isArray(permissions?.deny) ? permissions.deny.filter((v): v is string => typeof v === "string") : [];
   if (file.endsWith("settings.json") && !deny.some(rule => /\.env/.test(rule))) findings.push(finding("SHIELD-PERM-006", file, 1, "No deny rule protects `.env` files from being read by the agent."));
@@ -294,7 +298,7 @@ function scanClaudeSettings(file: string, content: string, json: unknown): Shiel
       const commands = Array.isArray(record?.hooks) ? record.hooks : [];
       for (const hook of commands) {
         const command = asRecord(hook)?.command;
-        if (typeof command === "string") findings.push(...scanHookCommand(file, content, command, matcher));
+        if (typeof command === "string") findings.push(...scanHookCommand(file, content, command, matcher), ...scanHookCommandExtended(file, content, command, finding as MakeFinding) as ShieldFinding[]);
       }
     }
   }
@@ -303,9 +307,8 @@ function scanClaudeSettings(file: string, content: string, json: unknown): Shiel
 
 function scanMcpConfig(file: string, content: string, json: unknown): ShieldFinding[] {
   const findings: ShieldFinding[] = [];
-  const root = asRecord(json);
-  const servers = asRecord(root?.mcpServers) ?? asRecord(root?.servers) ?? asRecord(root?.mcp);
-  for (const [name, value] of Object.entries(servers ?? {})) {
+  const servers = mcpServers(json);
+  for (const [name, value] of Object.entries(servers)) {
     const server = asRecord(value);
     if (!server) continue;
     const line = lineOf(content, `"${name}"`);
@@ -383,23 +386,32 @@ export async function runShield(projectPath: string, options: { now?: () => Date
   const { root, files } = await discoverShieldFiles(projectPath);
   const findings: ShieldFinding[] = [];
   const contents = new Map<string, string>();
+  const mcpConfigs: Array<{ file: string; content: string; json: unknown }> = [];
   for (const absolute of files) {
     const file = path.relative(root, absolute).split(path.sep).join("/");
     const content = await readText(absolute);
     contents.set(file, content);
-    findings.push(...scanSecrets(file, content));
+    const make = finding as MakeFinding;
+    findings.push(...scanSecrets(file, content), ...scanTextExtended(file, content, make) as ShieldFinding[]);
     const isWorkflow = file.startsWith(".github/workflows/");
-    if (!isWorkflow) findings.push(...scanInjection(file, content));
-    if (isWorkflow && /\.ya?ml$/.test(file)) findings.push(...scanWorkflow(file, content));
+    if (!isWorkflow) findings.push(...scanInjection(file, content), ...scanInstructionsExtended(file, content, make, { generated: content.includes("Generated by FORGE") }) as ShieldFinding[]);
+    if (isWorkflow && /\.ya?ml$/.test(file)) findings.push(...scanWorkflow(file, content), ...scanWorkflowExtended(file, content, make) as ShieldFinding[]);
+    if (/^(?:\.claude|\.forge)\/hooks\/.+\.(?:sh|js|mjs|cjs|ts|py)$/.test(file)) findings.push(...scanHookCommand(file, content, content, undefined), ...scanHookCommandExtended(file, content, content, make) as ShieldFinding[]);
+    if (OTHER_SETTINGS_FILES.includes(file)) findings.push(...scanOtherSettings(file, content, make) as ShieldFinding[]);
     if (file.endsWith(".json")) {
       let json: unknown;
       try { json = JSON.parse(content); } catch { json = undefined; }
       if (json !== undefined) {
         if (SETTINGS_FILES.includes(file)) findings.push(...scanClaudeSettings(file, content, json));
-        if (MCP_FILES.includes(file)) findings.push(...scanMcpConfig(file, content, json));
+        if (MCP_FILES.includes(file)) {
+          findings.push(...scanMcpConfig(file, content, json), ...scanMcpExtended(file, content, json, finding as MakeFinding) as ShieldFinding[]);
+          mcpConfigs.push({ file, content, json });
+        }
       }
     }
   }
+
+  findings.push(...scanMcpShadowing(mcpConfigs, finding as MakeFinding) as ShieldFinding[], ...await scanRepositoryExtended(root, finding as MakeFinding) as ShieldFinding[]);
 
   // Reuse the established FORGE instruction rules (broad permissions, review bypass, untrusted content).
   let legacyFindings: Awaited<ReturnType<typeof auditAgentConfiguration>>["findings"] = [];

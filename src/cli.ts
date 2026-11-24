@@ -52,10 +52,16 @@ import { mkdir as mkdirAsync } from "node:fs/promises";
 import { formatSkillContext, loadSkillRegistry, selectSkills } from "./core/skill-registry.js";
 import { applyBeforeAgentHooks, loadHooks } from "./core/hook-engine.js";
 import { assertSupportedAgentPolicy, loadPermissionPolicy } from "./core/permission-policy.js";
-import { doctorHarness, formatDoctorReport, formatInstallResult, formatUninstallResult, installHarness, parseProfile, parseTargets, uninstallHarness } from "./core/harness-installer.js";
+import { detectHarnessTargets, doctorHarness, formatDoctorReport, formatInstallResult, formatUninstallResult, installHarness, parseProfile, parseTargets, uninstallHarness } from "./core/harness-installer.js";
 import { loadHarnessCatalog, type CatalogKind } from "./core/harness-catalog.js";
+import { addManualInstinct, evolveInstincts, exportInstincts, formatInstinctList, importInstincts, learnInstincts, loadInstincts, removeInstinct, setInstinctStatus, type InstinctStatus } from "./core/instincts.js";
+import { buildCostReport, formatCostReport } from "./core/session-cost.js";
+import { renderStatusLine } from "./core/statusline.js";
+import { formatLoop, LOOP_AGENTS, listLoops, readLoop, runVerifiedLoop, type LoopAgent } from "./core/verified-loop.js";
+import { buildScorecard, formatScorecard, formatScorecardMarkdown } from "./core/harness-scorecard.js";
+import { formatHarnessCapabilities, HARNESS_CAPABILITY_SCHEMA_VERSION, listHarnessCapabilities } from "./core/harness-capabilities.js";
 import { applyShieldFixes, formatShieldMarkdown, formatShieldReport, parseSeverity, runShield, severityAtLeast, toSarif } from "./core/forge-shield.js";
-import { writeFile as writeTextFile } from "node:fs/promises";
+import { readFile, writeFile as writeTextFile } from "node:fs/promises";
 import { ModelRouter } from "./core/model-router.js";
 import { loadExecutionTrace, saveExecutionTrace } from "./core/execution-trace.js";
 import { createReplayRun } from "./core/run-replay.js";
@@ -127,7 +133,7 @@ function readAgentDurationBudgets(): Record<string, number> | undefined {
   return budgets;
 }
 
-const VERSION = "2.0.1";
+const VERSION = "3.0.0";
 
 const HELP = `
 FORGE — The AI Engineering Workbench
@@ -137,13 +143,25 @@ Usage:
 
 Commands:
   init [path]      Create a safe, local-first .forge starter workspace
-  install [path]   Install FORGE agents, skills, commands and rules into Claude Code, Cursor, Codex, OpenCode and Gemini
+  install [path]   Install FORGE agents, skills, commands and rules (Claude Code, Cursor, Codex, OpenCode, Gemini; Copilot, Windsurf, Kiro, Cline, Zed opt-in)
                    [--target claude,cursor,codex,opencode,gemini|all] [--profile minimal|standard|full] [--lang ts,python] [--hooks] [--dry-run] [--force]
   analyze [path]   Learn the repo (stack, scripts, tests, commit style) and generate a project skill [--write] [--json]
-  hook EVENT       Claude Code runtime hook (pre-tool, post-edit, stop, session-start); reads hook JSON on stdin
+  hook EVENT       Claude Code runtime hook (pre-tool, post-edit, stop, session-start, prompt-submit, pre-compact,
+                   session-end); reads hook JSON on stdin
+  statusline       Claude Code status line: model, branch, unverified edits, last verification, guard blocks, cost
+  cost [path]      Token usage and estimated spend per session, model and day [--json] [--days N]
   uninstall [path] Remove unmodified FORGE harness files and managed blocks [--dry-run] [--force]
   doctor [path]    Check installed harness files for missing, modified or outdated entries
   repair [path]    Restore missing and outdated harness files (keeps local edits)
+  scorecard [path] Deterministic 0-10 readiness score per category (install, coverage, security, guards,
+                   quality gates, context, memory, learning, CI) with top actions [--json] [--markdown] [--verbose] [--min N]
+  instinct ACTION  Learned behaviours: learn | list | add | promote ID.. | reject ID.. | remove ID | export | import FILE
+                   [path] [--trigger T --action A] [--status S] [--global] [--dry-run] [--json] [--out FILE]
+  evolve [path]    Compile approved instincts into a forge-learned skill (Claude Code + .agents) [--write] [--force] [--global]
+  loop ACTION      Verified agent loop: start | status [ID] | list
+                   start [path] --goal TEXT --check CMD [--check CMD...] [--agent claude|codex|gemini|opencode|command]
+                   [--agent-cmd "prog args"] [--agent-arg ARG...] [--max-iterations N] [--allow-dirty] [--dry-run] [--json]
+  harnesses        List supported harnesses and their actual FORGE integration capabilities [--json]
   catalog          List the FORGE catalog [--kind agent|skill|command|rule] [--json]
   shield [path]    Security review of agent settings, hooks, MCP servers, instructions and workflows
                    [--json] [--markdown] [--sarif FILE] [--fix] [--dry-run] [--fail-on critical|high|medium|low]
@@ -268,11 +286,11 @@ async function main(args: string[]): Promise<void> {
     case "install":
     case "repair": {
       if (rest.includes("--help")) {
-        process.stdout.write("Usage: forge " + command + " [path] [--target LIST|all] [--profile minimal|standard|full] [--lang LIST] [--hooks|--no-hooks] [--hook-command CMD] [--dry-run] [--force] [--json]\n");
+        process.stdout.write("Usage: forge " + command + " [path] [--target LIST|default|all] [--profile minimal|standard|full] [--lang LIST] [--hooks|--no-hooks] [--statusline] [--hook-command CMD] [--dry-run] [--force] [--json]\n");
         return;
       }
       try {
-        const options = parseHarnessArgs(rest, ["--target", "--profile", "--lang", "--hook-command"], ["--dry-run", "--force", "--json", "--hooks", "--no-hooks"]);
+        const options = parseHarnessArgs(rest, ["--target", "--profile", "--lang", "--hook-command"], ["--dry-run", "--force", "--json", "--hooks", "--no-hooks", "--statusline", "--no-statusline"]);
         if (options.flags.has("--hooks") && options.flags.has("--no-hooks")) throw new Error("Use either --hooks or --no-hooks");
         const existing = command === "repair" ? await doctorHarness({ projectPath: options.path, forgeVersion: VERSION }) : undefined;
         if (command === "repair" && !existing?.installed) throw new Error("FORGE harness is not installed here. Run `forge install` first.");
@@ -281,10 +299,11 @@ async function main(args: string[]): Promise<void> {
           forgeVersion: VERSION,
           dryRun: options.flags.has("--dry-run"),
           force: options.flags.has("--force"),
-          hooks: options.flags.has("--hooks") || (!options.flags.has("--no-hooks") && Boolean(existing?.hooks ?? (await doctorHarness({ projectPath: options.path, forgeVersion: VERSION }).catch(() => undefined))?.hooks)),
+          hooks: options.flags.has("--hooks") || options.flags.has("--statusline") || (!options.flags.has("--no-hooks") && Boolean(existing?.hooks ?? (await doctorHarness({ projectPath: options.path, forgeVersion: VERSION }).catch(() => undefined))?.hooks)),
           ...(options.values.has("--hook-command") ? { hookCommand: options.values.get("--hook-command") as string } : {}),
+          ...(options.flags.has("--statusline") ? { statusLine: true } : options.flags.has("--no-statusline") ? { statusLine: false } : {}),
           profile: parseProfile(options.values.get("--profile") ?? existing?.profile),
-          targets: options.values.has("--target") ? parseTargets(options.values.get("--target")) : (existing?.targets ?? parseTargets("all")),
+          targets: options.values.has("--target") ? parseTargets(options.values.get("--target")) : (existing?.targets ?? [...new Set([...parseTargets("default"), ...await detectHarnessTargets(options.path)])]),
           ...(options.values.has("--lang") ? { languages: (options.values.get("--lang") ?? "").split(",").map(v => normalizeLanguage(v)).filter(Boolean) } : existing?.languages ? { languages: existing.languages } : {}),
         });
         process.stdout.write(options.flags.has("--json") ? JSON.stringify({ ...result, plan: { ...result.plan, files: result.plan.files.map(f => ({ path: f.path, targets: f.targets, item: f.item })) } }, null, 2) + "\n" : formatInstallResult(result) + "\n");
@@ -314,6 +333,164 @@ async function main(args: string[]): Promise<void> {
         if (report.installed && !report.healthy) process.exitCode = 2;
       } catch (error) {
         process.stderr.write("FORGE doctor failed: " + (error instanceof Error ? error.message : String(error)) + "\n");
+        process.exitCode = 1;
+      }
+      return;
+    }
+    case "scorecard":
+    case "harness-audit": {
+      try {
+        const options = parseHarnessArgs(rest, ["--min"], ["--json", "--markdown", "--verbose"]);
+        const card = await buildScorecard({ projectPath: options.path, forgeVersion: VERSION });
+        process.stdout.write((options.flags.has("--json") ? JSON.stringify(card, null, 2) : options.flags.has("--markdown") ? formatScorecardMarkdown(card) : formatScorecard(card, { verbose: options.flags.has("--verbose") })) + "\n");
+        if (options.values.has("--min")) {
+          const min = Number(options.values.get("--min"));
+          if (!Number.isFinite(min) || min < 0 || min > 100) throw new Error("--min must be a percentage between 0 and 100");
+          if (card.percent < min) process.exitCode = 4;
+        }
+      } catch (error) {
+        process.stderr.write("FORGE scorecard failed: " + (error instanceof Error ? error.message : String(error)) + "\n");
+        process.exitCode = 1;
+      }
+      return;
+    }
+    case "instinct":
+    case "instincts": {
+      const [action = "list", ...instinctArgs] = rest;
+      try {
+        const ids = instinctArgs.filter(arg => /^inst-[a-f0-9]{10}$/.test(arg));
+        const instinctValues = ["--trigger", "--action", "--domain", "--status", "--out"];
+        const positional = instinctArgs.filter((arg, index) => !arg.startsWith("--") && !ids.includes(arg) && !instinctValues.includes(instinctArgs[index - 1] ?? ""));
+        // `import FILE [path]`: the first positional is the export file, not the project.
+        const importFile = action === "import" ? positional[0] : undefined;
+        const options = parseHarnessArgs(instinctArgs.filter(arg => !ids.includes(arg) && arg !== importFile), instinctValues, ["--global", "--dry-run", "--json"]);
+        const scope = options.flags.has("--global") ? "global" as const : "project" as const;
+        if (action === "learn") {
+          const result = await learnInstincts(options.path, { dryRun: options.flags.has("--dry-run") });
+          if (options.flags.has("--json")) process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+          else {
+            process.stdout.write(`FORGE learned ${result.added.length} new and refreshed ${result.updated.length} instinct(s) (${result.total} stored)${options.flags.has("--dry-run") ? " — dry run, nothing written" : ""}.\n`);
+            for (const i of result.added) process.stdout.write(`  + ${i.id} ${Math.round(i.confidence * 100)}%  When ${i.trigger}: ${i.action}\n`);
+            if (result.added.length) process.stdout.write("New instincts are candidates. Review them, then `forge instinct promote ID` the ones you trust.\n");
+          }
+        } else if (action === "list" || action === "status") {
+          const status = options.values.get("--status") as InstinctStatus | undefined;
+          if (status && !["candidate", "active", "rejected"].includes(status)) throw new Error("--status must be candidate, active or rejected");
+          const instincts = (await loadInstincts(options.path, scope)).filter(i => !status || i.status === status);
+          process.stdout.write((options.flags.has("--json") ? JSON.stringify(instincts, null, 2) : formatInstinctList(instincts)) + "\n");
+        } else if (action === "add") {
+          const trigger = options.values.get("--trigger");
+          const what = options.values.get("--action");
+          if (!trigger || !what) throw new Error("Usage: forge instinct add [path] --trigger \"editing api/**\" --action \"update the OpenAPI spec\" [--domain api] [--global]");
+          const domain = options.values.get("--domain");
+          const instinct = await addManualInstinct(options.path, trigger, what, { scope, ...(domain ? { domain } : {}) });
+          process.stdout.write(`Saved active instinct ${instinct.id} to the ${scope} store.\n`);
+        } else if (action === "promote" || action === "reject") {
+          if (!ids.length) throw new Error(`Usage: forge instinct ${action} ID [ID...] [path] [--global]`);
+          const changed = await setInstinctStatus(options.path, ids, action === "promote" ? "active" : "rejected", { scope });
+          process.stdout.write(`${action === "promote" ? "Promoted" : "Rejected"} ${changed.length} instinct(s).${action === "promote" ? " They now reach new sessions; run `forge evolve --write` to compile them into a skill." : ""}\n`);
+        } else if (action === "remove") {
+          if (ids.length !== 1) throw new Error("Usage: forge instinct remove ID [path] [--global]");
+          process.stdout.write((await removeInstinct(options.path, ids[0] as string, scope)) ? `Removed ${ids[0]}.\n` : `No instinct ${ids[0]}.\n`);
+        } else if (action === "export") {
+          const status = options.values.get("--status") as InstinctStatus | undefined;
+          const payload = JSON.stringify(await exportInstincts(options.path, { scope, ...(status ? { status } : {}) }), null, 2) + "\n";
+          if (options.values.has("--out")) { await writeTextFile(path.resolve(options.values.get("--out") as string), payload, "utf8"); process.stdout.write(`Exported instincts to ${options.values.get("--out")}.\n`); }
+          else process.stdout.write(payload);
+        } else if (action === "import") {
+          const file = importFile;
+          if (!file) throw new Error("Usage: forge instinct import FILE [path] [--global]");
+          const raw = await readFile(path.resolve(file), "utf8");
+          if (raw.length > 1024 * 1024) throw new Error("Import file exceeds 1 MiB.");
+          const result = await importInstincts(options.path, JSON.parse(raw), { scope });
+          process.stdout.write(`Imported ${result.added.length} new candidate instinct(s); existing instincts were left unchanged. Promote the ones you trust.\n`);
+        } else {
+          throw new Error(`Unknown instinct action "${action}". Use learn, list, add, promote, reject, remove, export or import.`);
+        }
+      } catch (error) {
+        process.stderr.write("FORGE instinct failed: " + (error instanceof Error ? error.message : String(error)) + "\n");
+        process.exitCode = 1;
+      }
+      return;
+    }
+    case "evolve": {
+      try {
+        const options = parseHarnessArgs(rest, [], ["--write", "--force", "--global", "--json"]);
+        const result = await evolveInstincts(options.path, { write: options.flags.has("--write"), force: options.flags.has("--force"), includeGlobal: options.flags.has("--global") });
+        if (options.flags.has("--json")) { process.stdout.write(JSON.stringify({ instincts: result.instincts, files: result.files }, null, 2) + "\n"); return; }
+        if (!result.instincts) { process.stdout.write("No active instincts yet. Run `forge instinct learn`, then `forge instinct promote ID`.\n"); return; }
+        if (!options.flags.has("--write")) process.stdout.write(result.content + "\n--- dry run: pass --write to save ---\n");
+        for (const file of result.files) process.stdout.write(`  ${file.action.padEnd(20)} ${file.path}\n`);
+      } catch (error) {
+        process.stderr.write("FORGE evolve failed: " + (error instanceof Error ? error.message : String(error)) + "\n");
+        process.exitCode = 1;
+      }
+      return;
+    }
+    case "loop": {
+      const [action = "status", ...loopArgs] = rest;
+      try {
+        // Repeatable options are collected before the shared parser sees the rest.
+        const repeated = { checks: [] as string[], agentArgs: [] as string[] };
+        const remaining: string[] = [];
+        for (let i = 0; i < loopArgs.length; i++) {
+          const arg = loopArgs[i] as string;
+          if (arg === "--check" || arg === "--agent-arg") {
+            const value = loopArgs[i + 1];
+            if (value === undefined) throw new Error(arg + " requires a value");
+            (arg === "--check" ? repeated.checks : repeated.agentArgs).push(value);
+            i += 1;
+          } else remaining.push(arg);
+        }
+        const loopId = remaining.find(arg => /^loop-[\w-]+$/.test(arg));
+        const options = parseHarnessArgs(remaining.filter(arg => arg !== loopId), ["--goal", "--agent", "--agent-cmd", "--max-iterations"], ["--allow-dirty", "--dry-run", "--json", "--verbose"]);
+        if (action === "start") {
+          const agent = (options.values.get("--agent") ?? (options.values.has("--agent-cmd") ? "command" : "claude")) as LoopAgent;
+          if (!LOOP_AGENTS.includes(agent)) throw new Error(`--agent must be one of ${LOOP_AGENTS.join(", ")}`);
+          const maxIterations = options.values.has("--max-iterations") ? Number(options.values.get("--max-iterations")) : undefined;
+          if (maxIterations !== undefined && (!Number.isInteger(maxIterations) || maxIterations < 1 || maxIterations > 20)) throw new Error("--max-iterations must be 1-20");
+          const agentCmd = options.values.get("--agent-cmd")?.split(/\s+/).filter(Boolean);
+          const json = options.flags.has("--json");
+          const record = await runVerifiedLoop({
+            projectPath: options.path,
+            goal: options.values.get("--goal") ?? "",
+            checks: repeated.checks,
+            agent,
+            ...(agentCmd ? { agentCommand: agentCmd } : {}),
+            ...(repeated.agentArgs.length ? { agentArgs: repeated.agentArgs } : {}),
+            ...(maxIterations ? { maxIterations } : {}),
+            allowDirty: options.flags.has("--allow-dirty"),
+            dryRun: options.flags.has("--dry-run"),
+            onEvent: message => { if (!json) process.stderr.write(`forge loop: ${message}\n`); },
+          });
+          process.stdout.write((json ? JSON.stringify(record, null, 2) : formatLoop(record, { verbose: true })) + "\n");
+          process.exitCode = record.status === "passed" || record.status === "dry-run" ? 0 : record.status === "needs-review" ? 5 : 1;
+        } else if (action === "status" || action === "show") {
+          const record = await readLoop(options.path, loopId);
+          if (!record) { process.stdout.write("No loops yet. Start one with: forge loop start --goal \"...\" --check \"npm test\"\n"); return; }
+          process.stdout.write((options.flags.has("--json") ? JSON.stringify(record, null, 2) : formatLoop(record, { verbose: true })) + "\n");
+        } else if (action === "list") {
+          const loops = await listLoops(options.path);
+          if (options.flags.has("--json")) process.stdout.write(JSON.stringify(loops.map(l => ({ id: l.id, status: l.status, goal: l.goal, iterations: l.iterations.length, createdAt: l.createdAt })), null, 2) + "\n");
+          else process.stdout.write(loops.length ? loops.map(l => `${l.id}  ${l.status.padEnd(12)} ${String(l.iterations.length).padStart(2)} iter  ${l.goal.split("\n")[0]?.slice(0, 70)}`).join("\n") + "\n" : "No loops yet.\n");
+        } else {
+          throw new Error(`Unknown loop action "${action}". Use start, status or list.`);
+        }
+      } catch (error) {
+        process.stderr.write("FORGE loop failed: " + (error instanceof Error ? error.message : String(error)) + "\n");
+        process.exitCode = 1;
+      }
+      return;
+    }
+    case "harnesses": {
+      try {
+        const options = parseHarnessArgs(rest, [], ["--json"]);
+        const manifest = listHarnessCapabilities();
+        process.stdout.write(options.flags.has("--json")
+          ? JSON.stringify({ schemaVersion: HARNESS_CAPABILITY_SCHEMA_VERSION, harnesses: manifest }, null, 2) + "\n"
+          : formatHarnessCapabilities() + "\n");
+      } catch (error) {
+        process.stderr.write("FORGE harness listing failed: " + (error instanceof Error ? error.message : String(error)) + "\n");
         process.exitCode = 1;
       }
       return;
@@ -357,6 +534,38 @@ async function main(args: string[]): Promise<void> {
         }
       } catch (error) {
         process.stderr.write("FORGE analyze failed: " + (error instanceof Error ? error.message : String(error)) + "\n");
+        process.exitCode = 1;
+      }
+      return;
+    }
+    case "statusline": {
+      const chunks: Buffer[] = [];
+      if (!process.stdin.isTTY) {
+        let size = 0;
+        for await (const chunk of process.stdin) {
+          const part = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
+          size += part.length;
+          if (size > 1024 * 1024) break;
+          chunks.push(part);
+        }
+      }
+      process.stdout.write(await renderStatusLine(Buffer.concat(chunks).toString("utf8"), process.cwd()) + "\n");
+      return;
+    }
+    case "cost":
+    case "cost-report": {
+      try {
+        const options = parseHarnessArgs(rest, ["--days"], ["--json"]);
+        let since: Date | undefined;
+        if (options.values.has("--days")) {
+          const days = Number(options.values.get("--days"));
+          if (!Number.isInteger(days) || days < 1 || days > 3650) throw new Error("--days must be a whole number of days");
+          since = new Date(Date.now() - days * 86_400_000);
+        }
+        const report = await buildCostReport(options.path, since ? { since } : {});
+        process.stdout.write((options.flags.has("--json") ? JSON.stringify(report, null, 2) : formatCostReport(report)) + "\n");
+      } catch (error) {
+        process.stderr.write("FORGE cost failed: " + (error instanceof Error ? error.message : String(error)) + "\n");
         process.exitCode = 1;
       }
       return;

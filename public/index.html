@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0b0a0e">
 <link rel="icon" type="image/svg+xml" href="/forge-mark.svg">
 <meta property="og:title" content="FORGE — the verified layer for your coding agents">
-<meta property="og:description" content="Agents, skills, rules and guard hooks for Claude Code, Cursor, Codex, OpenCode and Gemini — plus Shield security scans and verified pull requests.">
+<meta property="og:description" content="Agents, skills, rules and guard hooks for Claude Code, Cursor, Codex, OpenCode, Gemini, Copilot, Windsurf, Kiro, Cline and Zed — plus Shield security scans and verified pull requests.">
 <meta name="description" content="FORGE is an open-source agent harness: install specialist agents, skills, commands and rules into your coding tools, guard risky actions, scan agent configuration with Shield and check every pull request.">
 <title>FORGE | The verified layer for your coding agents</title>
 <style>
@@ -20,9 +20,12 @@ code,.mono{font-family:var(--mono)}
 .wrap{max-width:var(--max);margin:0 auto;padding:0 28px}
 
 /* Nav */
-.nav{position:fixed;inset:0 0 auto 0;z-index:20;transition:background .25s,border-color .25s;border-bottom:1px solid transparent}
-.nav.scrolled{background:rgba(11,10,14,.82);backdrop-filter:blur(14px);border-color:var(--line)}
-.nav .wrap{display:flex;align-items:center;gap:22px;height:68px}
+.nav{position:fixed;inset:14px 0 auto 0;z-index:20;pointer-events:none}
+.nav .wrap{display:flex;align-items:center;gap:22px;height:58px;pointer-events:auto;border:1px solid var(--line);border-radius:16px;background:rgba(14,12,17,.62);backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2);transition:background .25s,border-color .25s,box-shadow .25s;max-width:calc(var(--max) - 0px);padding:0 10px 0 18px}
+.nav.scrolled .wrap{background:rgba(14,12,17,.86);border-color:var(--line2);box-shadow:0 12px 40px rgba(0,0,0,.35)}
+.stars{display:inline-flex;align-items:center;gap:7px}
+.stars svg{width:15px;height:15px}
+.stars b{font-variant-numeric:tabular-nums}
 .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.12em;font-size:15px}
 .brand img{width:28px;height:28px}
 .links{display:flex;gap:22px;margin-left:auto;font-size:14px;color:var(--muted)}
@@ -69,11 +72,37 @@ i.logo span{display:none}
 .stat{border:1px solid var(--line);border-radius:14px;padding:18px 18px 16px;background:rgba(19,17,22,.76);backdrop-filter:blur(6px)}
 .stat b{display:block;font-size:30px;letter-spacing:-.02em;line-height:1.1}
 .stat span{font-size:12.5px;color:var(--muted)}
+.stat span a{text-decoration:underline;text-decoration-color:var(--line2);text-underline-offset:3px}
+.stats.live{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:12px}
+.stats.live b{font-variant-numeric:tabular-nums}
 .footnote{font-size:12px;color:var(--faint);margin-top:12px}
 
 /* Sections */
 section.block{padding:96px 0}
 section.block+section.block{border-top:1px solid var(--line)}
+section.block.alt{background:linear-gradient(180deg,#100e14,#0d0c11)}
+section.block.light{background:#f1e9e4;color:#1b1416;border-top:0}
+section.block.light .label{color:#6d5c58}
+section.block.light h2 span{color:#b5644d}
+section.block.light .plan{background:#fffaf7;border-color:rgba(27,20,22,.12);color:#1b1416}
+section.block.light .plan .muted,section.block.light .plan li,section.block.light .price small{color:#5e504d}
+section.block.light .plan.featured{border-color:#c9775f;box-shadow:0 0 0 1px rgba(201,119,95,.3) inset,0 20px 50px rgba(120,60,40,.12)}
+section.block.light .plan li:before{color:#3f8f4a}
+section.block.light .btn{border-color:rgba(27,20,22,.2);background:transparent;color:#1b1416}
+section.block.light .btn:hover{border-color:#c9775f;background:rgba(201,119,95,.08)}
+section.block.light .btn.primary{background:#1b1416;color:#f8efe9;border-color:#1b1416}
+section.block.light .badge{color:#2f6f86;border-color:rgba(47,111,134,.4)}
+.vs{width:100%;border-collapse:collapse;font-size:15px}
+.vs th{text-align:left;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:650;padding:0 18px 14px}
+.vs td{padding:18px;border-top:1px solid var(--line);vertical-align:top}
+.vs td:first-child{font-weight:650;width:26%}
+.vs td:nth-child(2){color:var(--muted);width:30%}
+.vs td:nth-child(3) b{color:var(--ink)}
+.vs td:nth-child(3){color:var(--muted)}
+.vs .yes{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:rgba(159,213,164,.14);color:var(--ok);font-size:12px;margin-right:8px;vertical-align:-3px}
+.vs .no{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:rgba(242,155,124,.12);color:var(--bad);font-size:12px;margin-right:8px;vertical-align:-3px}
+.cards3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.cards3 .term{min-height:290px;font-size:12.5px}
 .label{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 12px}
 h2{font-size:clamp(32px,4vw,50px);line-height:1.08;letter-spacing:-.03em;font-weight:720;margin:0 0 40px;max-width:820px}
 h2 span{color:var(--accent)}
@@ -173,13 +202,59 @@ footer{border-top:1px solid var(--line);padding:46px 0 60px;margin-top:40px;font
 .foot a:hover{color:var(--ink)}
 .legal{margin-top:34px;font-size:12.5px;color:var(--faint)}
 
+/* Hero tiles and metrics panel */
+.tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px 18px;max-width:1120px}
+.tile{display:flex;align-items:center;gap:12px;font-weight:650;font-size:15px;color:var(--ink);padding:4px 0;transition:color .15s}
+.tile:hover{color:var(--accent)}
+.tile i{width:38px;height:38px;flex:none;border-radius:10px;display:grid;place-items:center;background:#f4efec;color:#1b1416;font-style:normal;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.tile i .glyph svg{width:60%;height:60%}
+.tile i.logo{background:#fff!important}
+.tile i img{display:none;width:72%;height:72%;object-fit:contain}
+.tile i.logo img{display:block}.tile i.logo .glyph{display:none}
+.metrics{margin-top:40px;border:1px solid var(--line2);border-radius:18px;background:rgba(14,12,17,.82);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);overflow:hidden}
+.mrow{display:grid}
+.mrow.big{grid-template-columns:repeat(4,minmax(0,1fr))}
+.mrow.small{grid-template-columns:repeat(5,minmax(0,1fr));border-top:1px solid var(--line)}
+.mrow>div{padding:22px 26px;border-left:1px solid var(--line);min-width:0}
+.mrow>div:first-child{border-left:0}
+.mrow.big b{display:block;font-size:40px;letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums}
+.mrow.big a{font-size:13.5px;color:var(--muted)}
+.mrow.big a:hover{color:var(--ink)}
+.mrow.small>div{display:flex;align-items:baseline;gap:10px;padding:16px 22px}
+.mrow.small b{font-size:24px;letter-spacing:-.01em}
+.mrow.small span{font-size:13px;color:var(--muted)}
+.methods{border-top:1px solid var(--accent);border-top-color:rgba(232,179,162,.55)}
+.methods summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:16px;padding:18px 26px;font-weight:700;font-size:15.5px}
+.methods summary::-webkit-details-marker{display:none}
+.methods summary span:before{content:"▸";display:inline-block;margin-right:10px;color:var(--accent);transition:transform .2s}
+.methods[open] summary span:before{transform:rotate(90deg)}
+.methods summary em{margin-left:auto;font-style:normal;font-weight:500;font-size:12.5px;color:var(--faint)}
+.mtabs{display:flex;gap:4px;flex-wrap:wrap;padding:0 22px;border-bottom:1px solid var(--line)}
+.mtabs button{background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);font:600 13.5px Inter,system-ui,sans-serif;padding:10px 12px;cursor:pointer}
+.mtabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
+.mpanel{display:none;padding:20px 26px 24px}
+.mpanel.on{display:block}
+.mpanel p{color:var(--muted);font-size:14.5px;margin-bottom:12px}
+.mpanel pre{margin:0;background:#0d0c10;border:1px solid var(--line);border-radius:12px;padding:16px 18px;font:13px/1.75 var(--mono);overflow-x:auto;color:#ddd6d3}
+.mpanel pre .c{color:var(--faint)}
+.mpanel table{width:100%;border-collapse:collapse;font-size:14px}
+.mpanel td{padding:9px 10px;border-top:1px solid var(--line);vertical-align:top}
+.mpanel tr:first-child td{border-top:0}
+.mpanel td:first-child{font-weight:650;white-space:nowrap}
+.mpanel td:last-child{color:var(--muted)}
+.mpanel code{font-size:12.5px;color:var(--accent2)}
+.mpanel ol{margin:0;padding-left:20px;color:var(--muted);font-size:14.5px}
+.mpanel ol li{margin:6px 0}
+.mpanel a{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+@media (max-width:1080px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}.mrow.small{grid-template-columns:repeat(3,minmax(0,1fr))}.mrow.small>div:nth-child(4){border-left:0}.mrow.small>div:nth-child(n+4){border-top:1px solid var(--line)}}
+@media (max-width:560px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.mrow.big{grid-template-columns:repeat(2,minmax(0,1fr))}.mrow.big>div:nth-child(3){border-left:0}.mrow.big>div:nth-child(n+3){border-top:1px solid var(--line)}.mrow.big b{font-size:30px}.mrow.small{grid-template-columns:1fr 1fr}.mrow.small>div{border-left:0;border-top:1px solid var(--line)}.methods summary em{display:none}.mpanel td:last-child{display:none}.mpanel{padding:16px}}
 .reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
 .reveal.in{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}html{scroll-behavior:auto}}
 
-@media (max-width:1080px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}.showcase,.split{grid-template-columns:1fr}.platforms{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:860px){.links,.navcta .hide-sm{display:none}.menu{display:inline-flex}.nav.open .links{display:flex;position:absolute;top:68px;left:0;right:0;flex-direction:column;gap:0;padding:8px 28px 18px;background:rgba(11,10,14,.96);border-bottom:1px solid var(--line)}.nav.open .links a{padding:10px 0}.navcta{margin-left:0}.cols3,.cards2,.pricing{grid-template-columns:1fr}.hero-art{inset:0;opacity:.35;-webkit-mask-image:linear-gradient(180deg,#000 40%,transparent 100%);mask-image:linear-gradient(180deg,#000 40%,transparent 100%)}.foot{grid-template-columns:1fr 1fr}}
-@media (max-width:560px){.wrap{padding:0 18px}.hero{padding-top:118px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.platforms,.grid4{grid-template-columns:1fr}.final{padding:40px 24px}section.block{padding:72px 0}.navcta .btn:not(.primary){display:none}}
+@media (max-width:1080px){.cards3{grid-template-columns:1fr}.stats{grid-template-columns:repeat(3,minmax(0,1fr))}.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}.showcase,.split{grid-template-columns:1fr}.platforms{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:860px){.links,.navcta .hide-sm{display:none}.menu{display:inline-flex}.nav.open .links{display:flex;position:absolute;top:66px;left:28px;right:28px;border-radius:14px;border:1px solid var(--line2);flex-direction:column;gap:0;padding:8px 28px 18px;background:rgba(11,10,14,.96);border-bottom:1px solid var(--line)}.nav.open .links a{padding:10px 0}.navcta{margin-left:0}.cols3,.cards2,.pricing{grid-template-columns:1fr}.hero-art{inset:0;opacity:.35;-webkit-mask-image:linear-gradient(180deg,#000 40%,transparent 100%);mask-image:linear-gradient(180deg,#000 40%,transparent 100%)}.foot{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.stats.live{grid-template-columns:repeat(2,minmax(0,1fr))}.vs td,.vs th{padding-left:8px;padding-right:8px}.vs td:nth-child(2),.vs th:nth-child(2){display:none}.nav .wrap{margin:0 12px}.wrap{padding:0 18px}.hero{padding-top:118px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.platforms,.grid4{grid-template-columns:1fr}.final{padding:40px 24px}section.block{padding:72px 0}.navcta .btn:not(.primary){display:none}}
 </style>
 </head>
 <body>
@@ -189,14 +264,14 @@ footer{border-top:1px solid var(--line);padding:46px 0 60px;margin-top:40px;font
     <a class="brand" href="/" aria-label="FORGE home"><img src="/forge-mark.svg" alt=""> FORGE</a>
     <nav class="links" aria-label="Primary">
       <a href="#github-app">GitHub App</a>
-      <a href="#toolkit">Toolkit</a>
+      <a href="#loop">Learn &amp; loop</a>
       <a href="#shield">Shield</a>
       <a href="#platforms">Platforms</a>
+      <a href="#why">Why FORGE</a>
       <a href="#pricing">Pricing</a>
-      <a href="#faq">FAQ</a>
     </nav>
     <div class="navcta">
-      <a class="btn sm hide-sm" href="https://github.com/ansh44233/FORGE-ECC">GitHub ↗</a>
+      <a class="btn sm hide-sm stars" href="https://github.com/ansh44233/FORGE-ECC" aria-label="FORGE on GitHub"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .2a8 8 0 0 0-2.5 15.6c.4 0 .5-.2.5-.4v-1.5c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.3 1.9.9 2.3.7.1-.5.3-.9.5-1.1-1.8-.2-3.6-.9-3.6-4 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.6 7.6 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.1 0 3.1-1.9 3.7-3.6 3.9.3.3.6.8.6 1.5v2.2c0 .2.1.5.6.4A8 8 0 0 0 8 .2"/></svg><b data-live="stars">GitHub</b></a>
       <a class="btn sm hide-sm" href="/app/">Dashboard</a>
       <a class="btn sm primary" href="/api/github/install">Get App</a>
     </div>
@@ -208,7 +283,7 @@ footer{border-top:1px solid var(--line);padding:46px 0 60px;margin-top:40px;font
 <section class="hero">
   <div class="hero-art" aria-hidden="true"></div>
   <div class="wrap">
-    <p class="eyebrow">FORGE 2.0.1 · open-source agent harness</p>
+    <p class="eyebrow">FORGE 3.0 · open-source agent harness</p>
     <h1>The verified layer<br><span>for your coding agents.</span></h1>
     <p class="lead">Agents, skills, rules and guard hooks for the tools you already use — with Shield security scans and a check on every pull request.</p>
     <div class="cta">
@@ -216,27 +291,117 @@ footer{border-top:1px solid var(--line);padding:46px 0 60px;margin-top:40px;font
       <a class="btn" href="/app/">Open the dashboard →</a>
     </div>
     <p class="cmd-label">Install the CLI · Node.js 22+</p>
-    <div class="cmd"><span class="p">$</span><code id="install-cmd">npm install -g https://github.com/ansh44233/FORGE-ECC/releases/download/v2.0.1/forge-engineering-workbench-2.0.1.tgz &amp;&amp; forge install . --hooks</code><button class="copy" id="copy" type="button">Copy</button></div>
+    <div class="cmd"><span class="p">$</span><code id="install-cmd">npm install -g https://github.com/ansh44233/FORGE-ECC/releases/download/v3.0.0/forge-engineering-workbench-3.0.0.tgz &amp;&amp; forge install . --hooks</code><button class="copy" id="copy" type="button">Copy</button></div>
     <div class="tools">
       <p>Install FORGE in your coding tool</p>
-      <div class="toolrow">
-        <span class="tool"><i><img data-logo src="/assets/logos/claude-code.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="M7.5 10l3 2.5-3 2.5"/><path d="M12.5 15.5h4"/></svg></span></i>Claude Code</span>
-        <span class="tool"><i><img data-logo src="/assets/logos/codex.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4.5c-2 0-3 1-3 3v2c0 1.3-.8 2.5-2 2.5 1.2 0 2 1.2 2 2.5v2c0 2 1 3 3 3"/><path d="M15 4.5c2 0 3 1 3 3v2c0 1.3.8 2.5 2 2.5-1.2 0-2 1.2-2 2.5v2c0 2-1 3-3 3"/></svg></span></i>Codex</span>
-        <span class="tool"><i><img data-logo src="/assets/logos/cursor.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 3.5l13 7.2-5.6 1.6 3.4 6.2-2.6 1.4-3.4-6.2-4.8 3.6z"/></svg></span></i>Cursor</span>
-        <span class="tool"><i><img data-logo src="/assets/logos/opencode.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><path d="M13.5 4.5l-3 15"/></svg></span></i>OpenCode</span>
-        <span class="tool"><i><img data-logo src="/assets/logos/gemini.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="M3 9h18"/><circle cx="6.3" cy="6.8" r=".4" fill="currentColor"/><circle cx="8.6" cy="6.8" r=".4" fill="currentColor"/><path d="M7 13.5h3.5M7 16h6"/></svg></span></i>Gemini CLI</span>
-        <span class="tool"><i><img data-logo src="/assets/logos/github.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6.5" cy="5.5" r="2.2"/><circle cx="6.5" cy="18.5" r="2.2"/><circle cx="17.5" cy="8.5" r="2.2"/><path d="M6.5 7.7v8.6"/><path d="M17.5 10.7c0 3.5-4 3.8-9.4 5.9"/></svg></span></i>GitHub</span>
+      <div class="tiles">
+        <a class="tile" href="#install-claude-code"><i><img data-logo src="/assets/logos/claude-code.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="M7.5 10l3 2.5-3 2.5"/><path d="M12.5 15.5h4"/></svg></span></i><span>Claude Code</span></a>
+        <a class="tile" href="#install-codex"><i><img data-logo src="/assets/logos/codex.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4.5c-2 0-3 1-3 3v2c0 1.3-.8 2.5-2 2.5 1.2 0 2 1.2 2 2.5v2c0 2 1 3 3 3"/><path d="M15 4.5c2 0 3 1 3 3v2c0 1.3.8 2.5 2 2.5-1.2 0-2 1.2-2 2.5v2c0 2-1 3-3 3"/></svg></span></i><span>Codex</span></a>
+        <a class="tile" href="#install-cursor"><i><img data-logo src="/assets/logos/cursor.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 3.5l13 7.2-5.6 1.6 3.4 6.2-2.6 1.4-3.4-6.2-4.8 3.6z"/></svg></span></i><span>Cursor</span></a>
+        <a class="tile" href="#install-opencode"><i><img data-logo src="/assets/logos/opencode.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><path d="M13.5 4.5l-3 15"/></svg></span></i><span>OpenCode</span></a>
+        <a class="tile" href="#install-gemini-cli"><i><img data-logo src="/assets/logos/gemini.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="M3 9h18"/><circle cx="6.3" cy="6.8" r=".4" fill="currentColor"/><circle cx="8.6" cy="6.8" r=".4" fill="currentColor"/><path d="M7 13.5h3.5M7 16h6"/></svg></span></i><span>Gemini CLI</span></a>
+        <a class="tile" href="#install-github"><i><img data-logo src="/assets/logos/github.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6.5" cy="5.5" r="2.2"/><circle cx="6.5" cy="18.5" r="2.2"/><circle cx="17.5" cy="8.5" r="2.2"/><path d="M6.5 7.7v8.6"/><path d="M17.5 10.7c0 3.5-4 3.8-9.4 5.9"/></svg></span></i><span>GitHub</span></a>
+        <a class="tile" href="#install-copilot"><i><span class="glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="16.5" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="800" fill="currentColor">Co</text></svg></span></i><span>Copilot</span></a>
+        <a class="tile" href="#install-windsurf"><i><span class="glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="16.5" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="800" fill="currentColor">W</text></svg></span></i><span>Windsurf</span></a>
+        <a class="tile" href="#install-kiro"><i><span class="glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="16.5" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="800" fill="currentColor">K</text></svg></span></i><span>Kiro</span></a>
+        <a class="tile" href="#install-cline"><i><span class="glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="16.5" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="800" fill="currentColor">Cl</text></svg></span></i><span>Cline</span></a>
+        <a class="tile" href="#install-zed"><i><span class="glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="16.5" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="800" fill="currentColor">Z</text></svg></span></i><span>Zed</span></a>
       </div>
     </div>
-    <div class="stats">
-      <div class="stat"><b>41</b><span>Specialist agents</span></div>
-      <div class="stat"><b>26</b><span>Skills</span></div>
-      <div class="stat"><b>24</b><span>Slash commands</span></div>
-      <div class="stat"><b>23</b><span>Language rules</span></div>
-      <div class="stat"><b>23</b><span>Shield security rules</span></div>
-      <div class="stat"><b>5</b><span>Harnesses, one install</span></div>
+    <div class="metrics" id="metrics">
+      <div class="mrow big">
+        <div><b data-live="stars">—</b><a href="https://github.com/ansh44233/FORGE-ECC/stargazers">GitHub stars* ↗</a></div>
+        <div><b data-live="forks">—</b><a href="https://github.com/ansh44233/FORGE-ECC/forks">GitHub forks* ↗</a></div>
+        <div><b data-live="downloads">—</b><a href="https://github.com/ansh44233/FORGE-ECC/releases">Release package downloads* ↗</a></div>
+        <div><b data-live="release">—</b><a href="https://github.com/ansh44233/FORGE-ECC/releases/latest">Latest release* ↗</a></div>
+      </div>
+      <div class="mrow small">
+        <div><b>41</b><span>specialist agents</span></div>
+        <div><b>51</b><span>skills, matched to your stack</span></div>
+        <div><b>29</b><span>slash commands</span></div>
+        <div><b>60</b><span>Shield rules</span></div>
+        <div><b>10</b><span>harnesses, one install</span></div>
+      </div>
+      <details class="methods" id="install">
+        <summary><span>Every installation method</span><em>* live from the GitHub API · catalog counts from the v3 repository</em></summary>
+        <div class="mtabs" role="tablist">
+          <button role="tab" class="on" data-tab="cli">CLI</button>
+          <button role="tab" data-tab="harness">Per harness</button>
+          <button role="tab" data-tab="app">GitHub App</button>
+          <button role="tab" data-tab="ci">GitHub Action</button>
+          <button role="tab" data-tab="windows">Windows</button>
+          <button role="tab" data-tab="source">From source</button>
+          <button role="tab" data-tab="remove">Update &amp; remove</button>
+        </div>
+        <div class="mpanel on" data-panel="cli">
+          <p>Install the released package, then add FORGE to a project. Requires Node.js 22+ and Git.</p>
+<pre><span class="c"># 1. install the CLI</span>
+npm install -g https://github.com/ansh44233/FORGE-ECC/releases/download/v3.0.0/forge-engineering-workbench-3.0.0.tgz
+<span class="c"># 2. preview, then install with runtime hooks and the status line</span>
+cd your-project
+forge install . --dry-run
+forge install . --hooks --statusline
+<span class="c"># 3. see where you stand</span>
+forge scorecard . &amp;&amp; forge shield .</pre>
+        </div>
+        <div class="mpanel" data-panel="harness">
+          <p>The first five tools install by default. The others are added when FORGE finds them in the repo, or on request with <code>--target</code>.</p>
+          <table>
+            <tr id="install-claude-code"><td>Claude Code</td><td><code>forge install . --target claude --hooks --statusline</code></td><td>agents, skills, <code>/forge:*</code> commands, rules, 7 hooks</td></tr>
+            <tr id="install-codex"><td>Codex</td><td><code>forge install . --target codex</code></td><td><code>AGENTS.md</code> block, <code>.agents/skills</code></td></tr>
+            <tr id="install-cursor"><td>Cursor</td><td><code>forge install . --target cursor</code></td><td><code>.cursor/rules/*.mdc</code>, commands</td></tr>
+            <tr id="install-opencode"><td>OpenCode</td><td><code>forge install . --target opencode</code></td><td>agents, commands, <code>AGENTS.md</code></td></tr>
+            <tr id="install-gemini-cli"><td>Gemini CLI</td><td><code>forge install . --target gemini</code></td><td>TOML commands, <code>GEMINI.md</code></td></tr>
+            <tr id="install-copilot"><td>Copilot</td><td><code>forge install . --target copilot</code></td><td>instructions, prompt files, custom agents</td></tr>
+            <tr id="install-windsurf"><td>Windsurf</td><td><code>forge install . --target windsurf</code></td><td>rules with triggers, workflows</td></tr>
+            <tr id="install-kiro"><td>Kiro</td><td><code>forge install . --target kiro</code></td><td>steering files</td></tr>
+            <tr id="install-cline"><td>Cline</td><td><code>forge install . --target cline</code></td><td><code>.clinerules</code> and workflows</td></tr>
+            <tr id="install-zed"><td>Zed</td><td><code>forge install . --target zed</code></td><td>shared harness, <code>AGENTS.md</code></td></tr>
+            <tr id="install-github"><td>Everything</td><td><code>forge install . --target all --profile full</code></td><td>all 10 harnesses, every stack skill</td></tr>
+          </table>
+        </div>
+        <div class="mpanel" data-panel="app">
+          <p>No local install needed. The app opens a setup pull request, checks every PR and powers the Control Center.</p>
+          <ol>
+            <li><a href="/api/github/install">Install the FORGE GitHub App ↗</a> on the repositories you choose.</li>
+            <li>Comment <code>/forge analyze</code> on any issue to get a setup pull request written for that repo.</li>
+            <li>Open the <a href="/app/">Control Center</a> to see readiness, Shield, PR risk, memory and loops.</li>
+          </ol>
+        </div>
+        <div class="mpanel" data-panel="ci">
+          <p>Fail CI on risky agent configuration and send findings to GitHub code scanning.</p>
+<pre>- uses: ansh44233/FORGE-ECC@v3.0.0
+  with:
+    operation: shield
+    fail-on: high
+- uses: github/codeql-action/upload-sarif@v3
+  if: always()
+  with:
+    sarif_file: forge-shield.sarif</pre>
+        </div>
+        <div class="mpanel" data-panel="windows">
+          <p>PowerShell, with Node.js 22+ installed.</p>
+<pre>npm install --global https://github.com/ansh44233/FORGE-ECC/releases/download/v3.0.0/forge-engineering-workbench-3.0.0.tgz
+cd C:\Users\you\Projects\my-project
+forge install . --hooks --statusline
+forge scorecard .</pre>
+        </div>
+        <div class="mpanel" data-panel="source">
+          <p>For contributors, or to run the latest main.</p>
+<pre>git clone https://github.com/ansh44233/FORGE-ECC.git
+cd FORGE-ECC
+npm ci &amp;&amp; npm run build &amp;&amp; npm link
+forge --version</pre>
+        </div>
+        <div class="mpanel" data-panel="remove">
+          <p>Your own files and edits are never overwritten or removed.</p>
+<pre>forge doctor .          <span class="c"># missing, modified or outdated FORGE files</span>
+forge repair .          <span class="c"># restore and update, keep your edits</span>
+forge uninstall . --dry-run
+forge uninstall .       <span class="c"># remove only what FORGE added</span></pre>
+        </div>
+      </details>
     </div>
-    <p class="footnote">Counts come from the FORGE 2.0 catalog and rule set in the open-source repository.</p>
   </div>
 </section>
 
@@ -250,7 +415,7 @@ footer{border-top:1px solid var(--line);padding:46px 0 60px;margin-top:40px;font
           <div class="frame-bar"><i></i><i></i><i></i><span>forge-ecc.vercel.app/app</span></div>
           <img src="/assets/dashboard-preview.jpg" alt="FORGE dashboard showing a Shield score, setup health, pull request risk and project profile" loading="lazy" width="1440" height="860">
         </div>
-        <p class="caption">Hosted dashboard · shown with sample data</p>
+        <p class="caption">FORGE Control Center · readiness, Shield, memory, instincts and loop receipts · sample data</p>
       </div>
       <div class="side reveal">
         <div class="icon"><img src="/forge-mark.svg" alt=""></div>
@@ -262,6 +427,7 @@ footer{border-top:1px solid var(--line);padding:46px 0 60px;margin-top:40px;font
           <li><code>/forge audit</code><span>Shield report</span></li>
           <li><code>/forge risk</code><span>PR risk score</span></li>
           <li><code>/forge doctor</code><span>Setup health</span></li>
+          <li><code>/app</code><span>Control Center for every repo</span></li>
         </ul>
         <a class="btn primary" href="/api/github/install">Install the GitHub App ↗</a>
         <p class="note">Commands run only for collaborators with write access. FORGE reads file lists, manifests, commit subjects and agent configuration — not your source code.</p>
@@ -287,16 +453,82 @@ footer{border-top:1px solid var(--line);padding:46px 0 60px;margin-top:40px;font
         <code class="id">forge-verification-loop</code>
         <h3>No claims without evidence.</h3>
         <p class="muted">Run the narrowest check, widen to typecheck, tests and build, then report exact commands and real results.</p>
-        <a class="more" href="https://github.com/ansh44233/FORGE-ECC/tree/main/catalog/skills">See all 26 skills →</a>
+        <a class="more" href="https://github.com/ansh44233/FORGE-ECC/tree/main/catalog/skills">See all 51 skills →</a>
       </div>
       <div class="col reveal">
         <div class="tag">Workflow</div>
         <code class="id">/learn · forge-project</code>
         <h3>A guide written for your repo.</h3>
         <p class="muted"><code>forge analyze</code> learns your verify commands and conventions; <code>/learn</code> keeps verified lessons for the next session.</p>
-        <a class="more" href="https://github.com/ansh44233/FORGE-ECC/tree/main/catalog/commands">See all 24 commands →</a>
+        <a class="more" href="https://github.com/ansh44233/FORGE-ECC/tree/main/catalog/commands">See all 28 commands →</a>
       </div>
     </div>
+  </div>
+</section>
+
+<section class="block alt" id="loop">
+  <div class="wrap">
+    <p class="label reveal">New in 3.0</p>
+    <h2 class="reveal">Learn, loop <span>and prove.</span></h2>
+    <div class="cards3">
+      <article class="card reveal">
+        <div class="term" aria-label="Example forge scorecard output">
+<div><span class="a">$</span> forge scorecard</div>
+<div>Scorecard <b>79</b>/90 · grade <b>B</b></div>
+<div class="c">──────────────────────────</div>
+<div>Harness install&nbsp;&nbsp;&nbsp; <span class="ok">██████████</span> 10</div>
+<div>Security posture&nbsp;&nbsp; <span class="ok">█████████</span><span class="c">░</span>&nbsp; 9</div>
+<div>Runtime guards&nbsp;&nbsp;&nbsp;&nbsp; <span class="ok">██████████</span> 10</div>
+<div>Project context&nbsp;&nbsp;&nbsp; <span class="w">███████</span><span class="c">░░░</span>&nbsp; 7</div>
+<div>Learning&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="w">█████</span><span class="c">░░░░░</span>&nbsp; 5</div>
+<div class="c">→ 1. forge analyze --write</div>
+        </div>
+        <div class="body">
+          <p class="kicker">Scorecard</p>
+          <h3>A readiness score you can check.</h3>
+          <p class="muted">Nine categories from install health to CI. Every point cites its evidence, every missing point names the command that earns it, and <code>--min 75</code> turns it into a CI gate.</p>
+          <a class="more" href="https://github.com/ansh44233/FORGE-ECC#harness-scorecard">How scoring works →</a>
+        </div>
+      </article>
+      <article class="card reveal">
+        <div class="term" aria-label="Example forge instinct learn output">
+<div><span class="a">$</span> forge instinct learn</div>
+<div>Learned <b>7</b> new instinct(s)</div>
+<div><span class="w">81%</span> When editing src/cli.ts:</div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;also review README.md <span class="c">(7 of 8 commits)</span></div>
+<div><span class="w">85%</span> When writing a commit message:</div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;use Conventional Commits with a scope</div>
+<div class="c">New instincts are candidates.</div>
+<div><span class="a">$</span> forge instinct promote inst-ff732cea60</div>
+<div><span class="ok">✓</span> Promoted 1 · reaches new sessions</div>
+        </div>
+        <div class="body">
+          <p class="kicker">Instincts</p>
+          <h3>Learning that waits for you.</h3>
+          <p class="muted">FORGE learns habits from git history, Guard denials and failed checks. Nothing reaches an agent until a person promotes it. <code>forge evolve</code> turns approved instincts into a skill.</p>
+          <a class="more" href="https://github.com/ansh44233/FORGE-ECC#instincts-and-continuous-learning">Instincts →</a>
+        </div>
+      </article>
+      <article class="card reveal">
+        <div class="term" aria-label="Example forge loop output">
+<div><span class="a">$</span> forge loop start --check "npm test"</div>
+<div>baseline&nbsp; <span class="b">✗</span> npm test</div>
+<div>#1 claude <span class="ok">✓</span> npm test · 1 file</div>
+<div><span class="chip ok">passed</span>verified by FORGE</div>
+<div class="c">──────────────────────────</div>
+<div>#1 agent deleted tests/sum.test.js</div>
+<div>&nbsp;&nbsp;&nbsp;<span class="ok">✓</span> npm test <span class="c">(green, but…)</span></div>
+<div><span class="chip b">needs-review</span>checks were changed</div>
+        </div>
+        <div class="body">
+          <p class="kicker">Verified loop</p>
+          <h3>Done means FORGE checked.</h3>
+          <p class="muted">Runs Claude Code, Codex, Gemini or OpenCode until checks that FORGE runs itself pass. If the agent deletes or skips tests, or loosens configs or CI, the loop stops instead of counting a pass.</p>
+          <a class="more" href="https://github.com/ansh44233/FORGE-ECC#verified-loop">Verified loop →</a>
+        </div>
+      </article>
+    </div>
+    <p class="note reveal">Output from real runs, shortened. The loop example uses test agents, including one written to delete a test.</p>
   </div>
 </section>
 
@@ -313,14 +545,14 @@ footer{border-top:1px solid var(--line);padding:46px 0 60px;margin-top:40px;font
 <div><span class="chip b">critical</span>Literal secret in MCP server env <span class="c">.mcp.json:9</span></div>
 <div><span class="chip b">high</span>Bash(*) pre-approved <span class="c">.claude/settings.json:4</span></div>
 <div><span class="chip w">medium</span>Unpinned npx MCP package <span class="c">.mcp.json:5</span></div>
-<div><span class="chip w">high</span>Hidden bidi Unicode in <span class="c">AGENTS.md:3</span></div>
+<div><span class="chip b">critical</span>AI agent workflow anyone can trigger <span class="c">agent.yml:8</span></div>
 <div class="c">→ forge shield . --fix  ·  --sarif shield.sarif  ·  --fail-on high</div>
         </div>
         <div class="body">
           <p class="kicker">FORGE Shield</p>
           <h3>Know what your agents can reach.</h3>
-          <p class="muted">Scores agent configuration 0–100 across permissions, hooks, MCP servers, hidden prompt injection, secrets and CI workflows. SARIF for code scanning, a CI gate and safe auto-fixes.</p>
-          <a class="more" href="https://github.com/ansh44233/FORGE-ECC#forge-shield--agent-harness-security-20">Shield rules →</a>
+          <p class="muted">60 rules across 11 tools: permissions, hooks, MCP servers, hidden prompt injection, secrets and CI. It also flags AI-agent workflows that anyone can trigger from a comment. Outputs SARIF, a CI gate and safe auto-fixes.</p>
+          <a class="more" href="https://github.com/ansh44233/FORGE-ECC#forge-shield">Shield rules →</a>
         </div>
       </article>
       <article class="card reveal">
@@ -332,14 +564,16 @@ footer{border-top:1px solid var(--line);padding:46px 0 60px;margin-top:40px;font
 <div>&nbsp;&nbsp;<span class="chip w">ask</span>Force-push rewrites remote history</div>
 <div><span class="a">Edit</span> .claude/settings.json</div>
 <div>&nbsp;&nbsp;<span class="chip w">ask</span>Agent is changing its own permissions</div>
-<div><span class="a">Bash</span> npm test</div>
-<div>&nbsp;&nbsp;<span class="chip ok">allow</span></div>
+<div><span class="a">Bash</span> git commit --no-verify</div>
+<div>&nbsp;&nbsp;<span class="chip b">deny</span>Skips the repo's git hooks</div>
+<div><span class="a">Prompt</span> "deploy with sk-ant-…"</div>
+<div>&nbsp;&nbsp;<span class="chip b">block</span>Live credential in prompt</div>
         </div>
         <div class="body">
           <p class="kicker">FORGE Guard</p>
           <h3>Stop risky actions before they run.</h3>
           <p class="muted">Runtime hooks deny catastrophic commands, ask before force-push, destructive SQL, deploys or secret access, re-check config an agent edits, and can verify before it says “done”.</p>
-          <a class="more" href="https://github.com/ansh44233/FORGE-ECC#runtime-hooks-and-layered-memory-20">How hooks work →</a>
+          <a class="more" href="https://github.com/ansh44233/FORGE-ECC#runtime-hooks-guard-and-memory">How hooks work →</a>
         </div>
       </article>
     </div>
@@ -347,7 +581,7 @@ footer{border-top:1px solid var(--line);padding:46px 0 60px;margin-top:40px;font
   </div>
 </section>
 
-<section class="block" id="memory">
+<section class="block alt" id="memory">
   <div class="wrap split">
     <div class="reveal">
       <p class="label">Memory</p>
@@ -388,12 +622,17 @@ forge_memory_search · forge_memory_add</div>
       <div class="platform reveal"><div class="top"><i><img data-logo src="/assets/logos/opencode.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><path d="M13.5 4.5l-3 15"/></svg></span></i><b>OpenCode</b><span class="type">Agents + commands</span></div><p>Subagents and commands in <code>.opencode/</code> plus <code>AGENTS.md</code></p></div>
       <div class="platform reveal"><div class="top"><i><img data-logo src="/assets/logos/gemini.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="M3 9h18"/><circle cx="6.3" cy="6.8" r=".4" fill="currentColor"/><circle cx="8.6" cy="6.8" r=".4" fill="currentColor"/><path d="M7 13.5h3.5M7 16h6"/></svg></span></i><b>Gemini CLI</b><span class="type">Commands</span></div><p>TOML commands in <code>.gemini/commands/forge/</code> and <code>GEMINI.md</code></p></div>
       <div class="platform reveal"><div class="top"><i><img data-logo src="/assets/logos/github.svg" alt=""><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6.5" cy="5.5" r="2.2"/><circle cx="6.5" cy="18.5" r="2.2"/><circle cx="17.5" cy="8.5" r="2.2"/><path d="M6.5 7.7v8.6"/><path d="M17.5 10.7c0 3.5-4 3.8-9.4 5.9"/></svg></span></i><b>GitHub</b><span class="type">App + checks</span></div><p>Setup pull requests, PR risk checks, SARIF and the <code>shield</code> Action</p></div>
+      <div class="platform reveal"><div class="top"><i><span class="glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="16.5" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="800" fill="currentColor">Co</text></svg></span></i><b>GitHub Copilot</b><span class="type">Native</span></div><p><code>.github/instructions</code> with <code>applyTo</code>, prompt files and custom agents</p></div>
+      <div class="platform reveal"><div class="top"><i><span class="glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="16.5" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="800" fill="currentColor">W</text></svg></span></i><b>Windsurf</b><span class="type">Rules + workflows</span></div><p><code>.windsurf/rules</code> with always-on, glob and model triggers, plus workflows</p></div>
+      <div class="platform reveal"><div class="top"><i><span class="glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="16.5" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="800" fill="currentColor">K</text></svg></span></i><b>Kiro</b><span class="type">Steering</span></div><p><code>.kiro/steering</code> with always, fileMatch and manual inclusion</p></div>
+      <div class="platform reveal"><div class="top"><i><span class="glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="16.5" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="800" fill="currentColor">Cl</text></svg></span></i><b>Cline</b><span class="type">Rules + workflows</span></div><p><code>.clinerules/</code> scoped rules and <code>.clinerules/workflows</code></p></div>
+      <div class="platform reveal"><div class="top"><i><span class="glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="16.5" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="800" fill="currentColor">Z</text></svg></span></i><b>Zed</b><span class="type">AGENTS.md</span></div><p>Shared harness and a managed <code>AGENTS.md</code> block for Zed's agent</p></div>
     </div>
-    <p class="note reveal">Every file is hashed in <code>.forge/install-state.json</code>. FORGE never overwrites your edits, and <code>forge uninstall</code> restores the project.</p>
+    <p class="note reveal">The first five tools are installed by default. The others are added when FORGE finds them in your repository. <code>forge harnesses</code> shows each tool's tested support level. Every file is hashed in <code>.forge/install-state.json</code>. FORGE never overwrites your edits, and <code>forge uninstall</code> restores the project.</p>
   </div>
 </section>
 
-<section class="block" id="intelligence">
+<section class="block alt" id="intelligence">
   <div class="wrap">
     <p class="label reveal">Codebase intelligence</p>
     <h2 class="reveal">Understand before <span>you change.</span></h2>
@@ -406,7 +645,27 @@ forge_memory_search · forge_memory_add</div>
   </div>
 </section>
 
-<section class="block" id="pricing">
+<section class="block" id="why">
+  <div class="wrap">
+    <p class="label reveal">Why FORGE</p>
+    <h2 class="reveal">Verified, <span>not claimed.</span></h2>
+    <div class="panel reveal" style="padding:22px 8px 6px">
+      <table class="vs">
+        <thead><tr><th>When…</th><th>Typical agent setup</th><th>With FORGE</th></tr></thead>
+        <tbody>
+          <tr><td>An agent says “done”</td><td><span class="no">✕</span>You trust the summary</td><td><span class="yes">✓</span><b>FORGE re-runs your checks</b>, and the stop hook and <code>forge loop</code> keep a receipt</td></tr>
+          <tr><td>Tests go green by deleting tests</td><td><span class="no">✕</span>Counted as a pass</td><td><span class="yes">✓</span><b>The loop stops with needs-review</b> when tests are deleted or skipped, or configs, scripts or CI change</td></tr>
+          <tr><td>The agent learns something</td><td><span class="no">✕</span>Saved and trusted automatically</td><td><span class="yes">✓</span><b>Candidate until a person promotes it</b>, with evidence and confidence attached</td></tr>
+          <tr><td>You install a toolkit</td><td><span class="no">✕</span>Files copied over your edits</td><td><span class="yes">✓</span><b>Every file is hashed</b>, your edits are never overwritten, and uninstall restores the project</td></tr>
+          <tr><td>Someone comments on an issue</td><td><span class="no">✕</span>A CI agent may run with secrets</td><td><span class="yes">✓</span><b>Shield flags it as critical</b> unless the workflow checks who triggered it</td></tr>
+          <tr><td>You compare repositories</td><td><span class="no">✕</span>Vibes</td><td><span class="yes">✓</span><b>A deterministic scorecard</b> with evidence for every point, across the fleet</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="block light" id="pricing">
   <div class="wrap">
     <p class="label reveal">Pricing</p>
     <h2 class="reveal">Start free. <span>Stay in control.</span></h2>
@@ -415,14 +674,14 @@ forge_memory_search · forge_memory_add</div>
         <div class="name">Open source</div>
         <div class="price">$0</div>
         <p class="muted">MIT licensed. Runs on your machine.</p>
-        <ul><li>Installer and full catalog</li><li>FORGE Shield and Guard hooks</li><li>Layered memory and MCP server</li><li>Local dashboard and CLI</li></ul>
+        <ul><li>Installer for 10 harnesses</li><li>Shield (60 rules) and Guard hooks</li><li>Memory, instincts and the verified loop</li><li>Scorecard, cost tracking and status line</li></ul>
         <a class="btn" href="https://github.com/ansh44233/FORGE-ECC">Get it on GitHub ↗</a>
       </div>
       <div class="plan featured reveal">
         <div class="name">GitHub App</div>
-        <div class="price">$0 <small>during 2.0</small></div>
+        <div class="price">$0 <small>during 3.0</small></div>
         <p class="muted">Hosted checks for your repositories.</p>
-        <ul><li>Setup and repair pull requests</li><li>PR risk score and Shield annotations</li><li>Hosted dashboard</li><li>Public and private repositories</li></ul>
+        <ul><li>Setup and repair pull requests</li><li>PR risk score and Shield annotations</li><li>Control Center: fleet, scorecard, memory, loops</li><li>Public and private repositories</li></ul>
         <a class="btn primary" href="/api/github/install">Install the GitHub App ↗</a>
       </div>
       <div class="plan reveal">
@@ -441,7 +700,8 @@ forge_memory_search · forge_memory_add</div>
     <p class="label reveal">FAQ</p>
     <h2 class="reveal">Questions before you begin.</h2>
     <div class="faq reveal">
-      <details><summary>What is FORGE?</summary><p>An open-source agent harness. It installs specialist agents, skills, commands and rules into Claude Code, Cursor, Codex, OpenCode and Gemini, guards risky actions with runtime hooks, scans agent configuration with Shield, and checks pull requests through a GitHub App.</p></details>
+      <details><summary>What is FORGE?</summary><p>An open-source agent harness. It installs specialist agents, skills, commands and rules into 10 coding tools, including Claude Code, Cursor, Codex, OpenCode, Gemini, Copilot, Windsurf, Kiro, Cline and Zed. It also guards risky actions with runtime hooks, scans agent configuration with Shield, learns approved project instincts, runs verified agent loops and checks pull requests through a GitHub App.</p></details>
+      <details><summary>How is the verified loop different from letting an agent run?</summary><p>FORGE decides when the work is done. Your agent never does. FORGE runs your checks itself after every iteration and saves a receipt. If the agent deletes or skips tests, loosens lint or type configs, or edits package scripts or CI, the loop stops for review instead of reporting a pass.</p></details>
       <details><summary>Does FORGE change my code?</summary><p>No. <code>forge install</code> writes only FORGE-managed agent files and never overwrites your edits. The GitHub App proposes changes as pull requests you review.</p></details>
       <details><summary>What does the GitHub App read?</summary><p>The file list, root manifests, commit subjects, pull request file lists and agent configuration files. It does not download or store your source code, and commands run only for collaborators with write access.</p></details>
       <details><summary>Can I use FORGE without an account?</summary><p>Yes. The CLI, installer, Shield, hooks, memory and local dashboard work entirely on your machine. The GitHub App and hosted dashboard are optional.</p></details>
@@ -451,14 +711,14 @@ forge_memory_search · forge_memory_add</div>
   </div>
 </section>
 
-<section class="block" style="border-top:0;padding-top:24px">
+<section class="block" style="border-top:0;padding-top:72px">
   <div class="wrap">
     <div class="final reveal">
       <h2>Give your agents <span>a verified way to work.</span></h2>
       <p>Install the CLI in one line, or add the GitHub App and get a setup pull request for your repository.</p>
       <div class="cta" style="margin:0">
         <a class="btn primary" href="/api/github/install">Install GitHub App ↗</a>
-        <a class="btn" href="https://github.com/ansh44233/FORGE-ECC#quick-start">Read the quick start →</a>
+        <a class="btn" href="https://github.com/ansh44233/FORGE-ECC#install-forge">Read the quick start →</a>
       </div>
     </div>
   </div>
@@ -469,9 +729,9 @@ forge_memory_search · forge_memory_add</div>
   <div class="wrap">
     <div class="foot">
       <div><a class="brand" href="/" style="display:flex"><img src="/forge-mark.svg" alt=""> FORGE</a><p style="margin-top:14px;max-width:300px">The verified layer for your coding agents. Open source, local-first, evidence by default.</p></div>
-      <div><h4>Product</h4><a href="#github-app">GitHub App</a><a href="/app/">Dashboard</a><a href="#shield">Shield</a><a href="#platforms">Platforms</a></div>
+      <div><h4>Product</h4><a href="#github-app">GitHub App</a><a href="/app/">Control Center</a><a href="#loop">Scorecard, instincts and loop</a><a href="#shield">Shield</a><a href="#platforms">Platforms</a></div>
       <div><h4>Open source</h4><a href="https://github.com/ansh44233/FORGE-ECC">Repository</a><a href="https://github.com/ansh44233/FORGE-ECC/blob/main/CHANGELOG.md">Changelog</a><a href="https://github.com/ansh44233/FORGE-ECC/issues">Issues</a><a href="https://github.com/ansh44233/FORGE-ECC/blob/main/LICENSE">MIT License</a></div>
-      <div><h4>Docs</h4><a href="https://github.com/ansh44233/FORGE-ECC#quick-start">Quick start</a><a href="https://github.com/ansh44233/FORGE-ECC/blob/main/docs/integrations/github-app.md">GitHub App</a><a href="https://github.com/ansh44233/FORGE-ECC/blob/main/docs/integrations/claude-code.md">Claude Code</a><a href="https://github.com/ansh44233/FORGE-ECC/blob/main/SECURITY.md">Security</a></div>
+      <div><h4>Docs</h4><a href="https://github.com/ansh44233/FORGE-ECC#install-forge">Quick start</a><a href="https://github.com/ansh44233/FORGE-ECC/blob/main/docs/integrations/github-app.md">GitHub App</a><a href="https://github.com/ansh44233/FORGE-ECC/blob/main/docs/integrations/claude-code.md">Claude Code</a><a href="https://github.com/ansh44233/FORGE-ECC/blob/main/SECURITY.md">Security</a></div>
     </div>
     <p class="legal">© 2026 FORGE contributors · MIT License</p>
   </div>
@@ -506,6 +766,29 @@ forge_memory_search · forge_memory_add</div>
     if (img.complete) show(); else img.addEventListener("load", show, { once: true });
     img.addEventListener("error", () => img.remove(), { once: true });
   });
+
+  document.querySelectorAll(".mtabs button").forEach(button => button.addEventListener("click", () => {
+    document.querySelectorAll(".mtabs button").forEach(b => b.classList.toggle("on", b === button));
+    document.querySelectorAll(".mpanel").forEach(p => p.classList.toggle("on", p.dataset.panel === button.dataset.tab));
+  }));
+  document.querySelectorAll('.tile').forEach(tile => tile.addEventListener("click", () => {
+    const details = document.getElementById("install");
+    details.open = true;
+    document.querySelector('.mtabs button[data-tab="' + (tile.textContent.trim() === "GitHub" ? "app" : "harness") + '"]').click();
+  }));
+
+  // Live GitHub numbers (unauthenticated API; values stay "—" if it is rate-limited or offline).
+  const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1).replace(/\.0$/, "") + "m" : n >= 1e4 ? (n / 1e3).toFixed(1).replace(/\.0$/, "") + "k" : n.toLocaleString("en-US");
+  const set = (key, value) => document.querySelectorAll('[data-live="' + key + '"]').forEach(el => { el.textContent = value; });
+  const gh = path => fetch("https://api.github.com/repos/ansh44233/FORGE-ECC" + path, { headers: { Accept: "application/vnd.github+json" } }).then(r => r.ok ? r.json() : Promise.reject(r.status));
+  gh("").then(repo => { set("stars", fmt(repo.stargazers_count)); set("forks", fmt(repo.forks_count)); }).catch(() => set("stars", "GitHub"));
+  gh("/releases?per_page=30").then(releases => {
+    if (!Array.isArray(releases) || !releases.length) return;
+    const total = releases.reduce((sum, r) => sum + (r.assets || []).reduce((s, a) => s + (a.download_count || 0), 0), 0);
+    set("downloads", fmt(total));
+    const latest = releases.find(r => !r.draft && !r.prerelease);
+    if (latest) set("release", String(latest.tag_name).replace(/^v/, "v").slice(0, 12));
+  }).catch(() => undefined);
 
   const items = document.querySelectorAll(".reveal");
   if (!("IntersectionObserver" in window) || matchMedia("(prefers-reduced-motion: reduce)").matches) {

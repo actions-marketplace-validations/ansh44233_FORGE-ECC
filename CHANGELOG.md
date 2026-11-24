@@ -1,5 +1,63 @@
 # FORGE Changelog
 
+## 3.0.0 — Learn, loop and prove
+
+FORGE 3.0 adds learning, unattended agent loops and a readiness score, and checks every result itself. The agent's word that it is done is never enough:
+
+- **10 harnesses** with one install.
+- **60 Shield rules.**
+- **A readiness scorecard.**
+- **Instincts that need your approval** before an agent uses them.
+- **Cost tracking and a status line.**
+- **A verified loop** that will not count a pass when the agent deleted or skipped tests.
+
+Install:
+
+```bash
+npm install -g https://github.com/ansh44233/FORGE-ECC/releases/download/v3.0.0/forge-engineering-workbench-3.0.0.tgz
+```
+
+### Upgrading from 2.x
+- Nothing breaks. The default install targets are the same five as in 2.x, and `.forge/install-state.json` is migrated from schema 1 to 2 automatically.
+- To add the new hooks (prompt secret guard, pre-compact and session-end handoffs, cost tracking), run `forge install --hooks` again. Add `--statusline` for the status line.
+- Shield has many more rules, so existing repos may show new findings. `forge shield --fail-on high` in CI only fails on high and critical findings.
+- `forge loop` needs the agent CLI you choose (`claude`, `codex`, `gemini` or `opencode`) on your PATH.
+
+### Added
+- **Five new harness targets:** GitHub Copilot, Windsurf, Kiro, Cline and Zed, each in its own native format and listed in the capability manifest. The five original targets stay the default. A new target is added automatically when the project already uses that tool. Use `--target default|all|LIST` to choose.
+- **`forge scorecard`** (alias `harness-audit`): deterministic 0–10 readiness score across nine categories. Each point cites its evidence, the output lists top actions, and `--min` works as a CI gate. It can also print JSON or Markdown.
+- **Instincts and `forge evolve`:** learns habits from git co-change history, commit conventions, Guard denials and verification failures. Learned and imported instincts stay candidates until a person promotes them. Includes promote, reject, export and import. `forge evolve` compiles active instincts into a `forge-learned` skill, and active instincts are injected at session start.
+- **Lifecycle hooks:**
+  - `prompt-submit` blocks pasted live credentials.
+  - `pre-compact` and `session-end` save automatic handoffs.
+  - `stop` and `session-end` record token usage.
+- **Guard rules:**
+  - Blocks `--no-verify`.
+  - Asks before git hooks are bypassed and before agents edit lint, format or type-check configs.
+  - Supports validated project-specific rules in `.forge/harness-hooks.json`.
+- **`forge cost`:** exact token usage per session, model and day, with labelled USD estimates and per-project rates.
+- **`forge statusline`** and `forge install --statusline`. FORGE never replaces your own status line.
+- **`forge loop`, a verified agent loop:**
+  - Runs Claude Code, Codex, Gemini, OpenCode or any command until checks that FORGE runs itself pass.
+  - Records a baseline, feeds failures back into the next iteration, and keeps a receipt for every iteration.
+  - Stops when the agent stalls.
+  - Integrity gate: stops with `needs-review` when the agent deletes or skips tests or changes test, lint or type configs, package scripts or CI, even if the checks went green.
+- **Shield now has 60 rules (up from 23):**
+  - Covers Codex, Gemini, VS Code/Copilot, Windsurf, Kiro, Cline, Zed and Roo config.
+  - New critical rule: AI-agent GitHub workflows that anyone can trigger from an issue or comment.
+  - New checks for dangerous pre-approved command families, subagent permission bypass, hook persistence and credential reads.
+  - New MCP checks: container escapes, tunnels, credentials in URLs, and shadowed servers.
+  - New secret checks: connection strings, webhooks, and `.env` files not ignored by git.
+  - Two false positives found by scanning real-world harness repos are fixed.
+  - The GitHub App scans the new locations too.
+- **51 skills (up from 26), matched to your stack.**
+  - 25 new skills:
+    - Language and framework: TypeScript strict mode, Next.js App Router, React, Node.js APIs, Python tooling, FastAPI, Django, Go, Rust, Spring Boot, Rails, Laravel, .NET and SwiftUI.
+    - Cross-stack: PostgreSQL, Kubernetes, Terraform, GraphQL, authentication and sessions, caching, LLM apps, ADRs, codebase onboarding, feature flags and background jobs.
+  - The new `languages:` frontmatter field means a stack skill is installed only when that stack is detected, or with `--profile full`. A Python repo gets the Django skill, not the Spring one.
+- Catalog commands: `/scorecard`, `/instincts`, `/evolve`, `/cost`, `/loop`.
+- Transactional installer with a recovery journal, versioned install state with v1 migration, and the harness capability manifest (`forge harnesses`).
+
 ## 2.0.1 — Install and stability fixes
 
 ### Fixed

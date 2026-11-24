@@ -9,7 +9,7 @@ on:
       release_tag:
         description: "Release tag to create (for example v1.0.0)"
         required: true
-        default: "v2.0.1"
+        default: "v3.0.0"
       target_ref:
         description: "Verified branch or commit to release"
         required: true
